@@ -13,6 +13,12 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<script>
+// Hlavné okno = lišta s kartami; každá karta je samostatná apka v rámčeku (?tab=N)
+window.__PT_SHELL = window.top === window && !/[?&]tab=/.test(location.search);
+window.__PT_TAB = !window.__PT_SHELL && window.parent !== window;
+if (window.__PT_SHELL) document.documentElement.classList.add("pt-shell");
+</script>
 <style>
 /* Layout: lišta s akciami hore, pod ňou pracovná plocha: listy PDF, stránka Wordu alebo mriežka tabuľky */
 :root {
@@ -271,6 +277,31 @@ table.xl td:focus { box-shadow: inset 0 0 0 2px var(--accent); white-space: pre-
   #print-area table.xp tr { break-inside: avoid; }
 }
 </style>
+<style>
+/* karty */
+html.pt-shell, html.pt-shell body { height: 100%; margin: 0; overflow: hidden; }
+html.pt-shell body > :not(#tabShell) { display: none !important; }
+#tabShell { display: flex; flex-direction: column; height: 100vh; height: 100dvh; background: var(--bg); }
+.tabbar { display: flex; align-items: flex-end; gap: 4px; padding: 6px 8px 0; background: var(--line); flex: none; padding-top: max(6px, env(safe-area-inset-top)); }
+.tabs { display: flex; gap: 3px; overflow-x: auto; overflow-y: hidden; flex: 0 1 auto; min-width: 0; scrollbar-width: thin; }
+.tab { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 4px 0 12px; max-width: 240px; min-width: 120px; flex: none;
+  background: color-mix(in srgb, var(--surface) 55%, var(--line)); color: var(--fg); border-radius: 9px 9px 0 0; cursor: pointer;
+  font: 500 14px var(--font-body); border: 0; border-bottom: 3px solid transparent; user-select: none; }
+.tab:hover { background: color-mix(in srgb, var(--surface) 80%, var(--line)); }
+.tab.on { background: var(--surface); border-bottom-color: var(--accent); }
+.tab .ic { width: 22px; height: 18px; border-radius: 4px; flex: none; color: #fff; font: 700 10px/18px var(--font-body); text-align: center; background: var(--muted); }
+.tab .ic.pdf { background: #d93025; } .tab .ic.doc { background: var(--word); } .tab .ic.sheet { background: var(--excel); }
+.tab .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
+.tab .x { width: 28px; height: 28px; border: 0; background: transparent; border-radius: 6px; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; flex: none; display: grid; place-items: center; padding: 0; }
+.tab .x:hover { background: var(--line); color: var(--fg); }
+#tabAdd { width: 38px; height: 34px; margin-bottom: 3px; border: 0; border-radius: 8px; background: transparent; font-size: 24px; line-height: 1; color: var(--fg); cursor: pointer; flex: none; }
+#tabAdd:hover { background: color-mix(in srgb, var(--surface) 60%, var(--line)); }
+#frames { position: relative; flex: 1; min-height: 0; }
+#frames iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--bg); visibility: hidden; }
+#frames iframe.on { visibility: visible; z-index: 1; }
+@media (pointer: coarse) { .tab { height: 42px; min-width: 96px; max-width: 170px; } .tab .x { width: 34px; height: 34px; } #tabAdd { width: 44px; height: 40px; } }
+</style>
 <style id="page-style"></style>
 </head>
 <body>
@@ -460,7 +491,7 @@ table.xl td:focus { box-shadow: inset 0 0 0 2px var(--accent); white-space: pre-
   </section>
 </main>
 
-<input type="file" id="file" accept=".pdf,.docx,.xlsx,.xlsm,.xls,.csv,.ods,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
+<input type="file" id="file" multiple accept=".pdf,.docx,.xlsx,.xlsm,.xls,.csv,.ods,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
 <input type="file" id="fileAppend" accept=".pdf,application/pdf" multiple hidden>
 <input type="file" id="fileImage" accept="image/*" hidden>
 <div class="pop" id="pop" hidden></div>
@@ -20754,6 +20785,90 @@ var __async = (__this, __arguments, generator) => {
 <script>
 (function () {
   "use strict";
+  if (!window.__PT_SHELL) return;
+  var LABEL = { pdf: "PDF", doc: "W", sheet: "X", start: "" };
+  var shell = document.createElement("div");
+  shell.id = "tabShell";
+  shell.innerHTML = '<div class="tabbar"><div class="tabs" id="tabs" role="tablist"></div>' +
+    '<button id="tabAdd" type="button" title="Nová karta" aria-label="Nová karta">+</button></div><div id="frames"></div>';
+  document.body.appendChild(shell);
+  var tabsEl = document.getElementById("tabs"), framesEl = document.getElementById("frames");
+  var tabs = [], active = null, seq = 0;
+  var base = location.href.split("#")[0].split("?")[0];
+  var extra = location.search.replace(/^\?/, "");
+  if (/[?&]shared=1/.test(location.search)) history.replaceState(null, "", location.pathname);
+
+  function newTab(queue, first) {
+    var id = ++seq;
+    var fr = document.createElement("iframe");
+    fr.title = "Dokument";
+    fr.setAttribute("allow", "clipboard-read; clipboard-write; fullscreen");
+    var q = "tab=" + id + (first ? "&first=1" : "") + (first && extra ? "&" + extra : "");
+    fr.src = base + "?" + q;
+    var el = document.createElement("div");
+    el.className = "tab"; el.setAttribute("role", "tab");
+    el.innerHTML = '<span class="ic"></span><span class="nm">Nová karta</span><span class="dot" hidden></span>' +
+      '<button class="x" type="button" title="Zavrieť kartu" aria-label="Zavrieť kartu">×</button>';
+    var t = { id: id, fr: fr, el: el, ready: false, queue: queue ? [queue] : [], title: "", kind: "start", dirty: false };
+    el.addEventListener("click", function (e) { if (e.target.closest(".x")) return; activate(t); });
+    el.addEventListener("auxclick", function (e) { if (e.button === 1) closeTab(t); });
+    el.querySelector(".x").addEventListener("click", function (e) { e.stopPropagation(); closeTab(t); });
+    tabs.push(t); tabsEl.appendChild(el); framesEl.appendChild(fr);
+    activate(t);
+    return t;
+  }
+  function activate(t) {
+    active = t;
+    tabs.forEach(function (x) { var on = x === t; x.el.classList.toggle("on", on); x.el.setAttribute("aria-selected", String(on)); x.fr.classList.toggle("on", on); });
+    document.title = t.title ? t.title + " – PDF Tlač" : "PDF Tlač";
+    t.el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    try { t.fr.focus(); } catch (e) {}
+  }
+  function closeTab(t) {
+    if (t.dirty && !window.confirm("„" + (t.title || "Dokument") + "“ má neuložené zmeny. Zavrieť kartu aj tak?")) return;
+    var i = tabs.indexOf(t);
+    tabs.splice(i, 1); t.el.remove(); t.fr.remove();
+    if (!tabs.length) { newTab(); return; }
+    if (active === t) activate(tabs[Math.min(i, tabs.length - 1)]);
+  }
+  function render(t) {
+    var ic = t.el.querySelector(".ic");
+    ic.className = "ic " + t.kind; ic.textContent = LABEL[t.kind] || "";
+    ic.hidden = t.kind === "start";
+    t.el.querySelector(".nm").textContent = (t.title || "Nová karta").split(" · ")[0];
+    t.el.title = t.title || "Nová karta";
+    t.el.querySelector(".dot").hidden = !t.dirty;
+    if (t === active) document.title = t.title ? t.title + " – PDF Tlač" : "PDF Tlač";
+  }
+  function flush(t) {
+    if (!t.ready) return;
+    while (t.queue.length) t.fr.contentWindow.postMessage(t.queue.shift(), "*");
+  }
+  window.addEventListener("message", function (e) {
+    var t = null;
+    tabs.forEach(function (x) { if (x.fr.contentWindow === e.source) t = x; });
+    var m = e.data;
+    if (!t || !m || typeof m !== "object" || !m.pt) return;
+    if (m.pt === "ready") { t.ready = true; flush(t); }
+    else if (m.pt === "state") { t.title = m.title || ""; t.kind = m.kind || "start"; t.dirty = !!m.dirty; render(t); }
+    else if (m.pt === "openNew") { (m.files || []).forEach(function (f) { var nt = newTab({ pt: "open", file: f }); flush(nt); }); }
+    else if (m.pt === "newDoc") { newTab({ pt: "new", what: m.what }); }
+  });
+  document.getElementById("tabAdd").addEventListener("click", function () { newTab(); });
+  // presúvanie kariet kolieskom myši do strany
+  tabsEl.addEventListener("wheel", function (e) { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { tabsEl.scrollLeft += e.deltaY; } }, { passive: true });
+  window.addEventListener("beforeunload", function (e) {
+    if (tabs.some(function (t) { return t.dirty; })) { e.preventDefault(); e.returnValue = ""; }
+  });
+  var secure = location.protocol === "https:" || location.hostname === "localhost";
+  if (secure && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(function () {});
+  newTab(null, true);
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  if (window.__PT_SHELL) return;
   var $ = function (id) { return document.getElementById(id); };
   var mode = "start";          // start | pdf | doc | sheet
   var dirty = false;
@@ -20812,7 +20927,12 @@ var __async = (__this, __arguments, generator) => {
       $("askNo").onclick = function () { $("askBack").hidden = true; resolve(false); };
     });
   }
-  function setDirty(v) { dirty = v; }
+  function setDirty(v) { var ch = dirty !== v; dirty = v; if (ch) tellShell(); }
+  var inTab = !!window.__PT_TAB;
+  function tellShell() {
+    if (!inTab) return;
+    try { parent.postMessage({ pt: "state", title: mode === "start" ? "" : ($("fileName").textContent || ""), kind: mode, dirty: dirty }, "*"); } catch (e) {}
+  }
   window.addEventListener("beforeunload", function (e) { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- prepínanie režimov ---------- */
@@ -20832,6 +20952,7 @@ var __async = (__this, __arguments, generator) => {
     $("printBtn").disabled = m === "start";
     $("fileName").textContent = title || "PDF, Word a Excel";
     document.title = title ? title + " – PDF Tlač" : "PDF Tlač";
+    tellShell();
     if (m === "start") checkResume();
   }
   $("homeBtn").addEventListener("click", function () {
@@ -20848,7 +20969,17 @@ var __async = (__this, __arguments, generator) => {
   function pick() { fileInput.value = ""; fileInput.click(); }
   $("openBtn").addEventListener("click", pick);
   $("openBtn2").addEventListener("click", pick);
-  fileInput.addEventListener("change", function () { if (fileInput.files[0]) openAny(fileInput.files[0]); });
+  fileInput.addEventListener("change", function () { openMany(fileInput.files); });
+  // ďalšie súbory idú do nových kariet; keď je už niečo otvorené, aj prvý
+  function openMany(list) {
+    var files = Array.prototype.slice.call(list || []);
+    if (!files.length) return;
+    if (inTab) {
+      var here = mode === "start" ? files.shift() : null;
+      if (files.length) parent.postMessage({ pt: "openNew", files: files }, "*");
+      if (here) openAny(here);
+    } else openAny(files[0]);
+  }
 
   var dragDepth = 0;
   window.addEventListener("dragenter", function (e) { e.preventDefault(); dragDepth++; document.body.classList.add("dragging"); });
@@ -20856,8 +20987,7 @@ var __async = (__this, __arguments, generator) => {
   window.addEventListener("dragover", function (e) { e.preventDefault(); });
   window.addEventListener("drop", function (e) {
     e.preventDefault(); dragDepth = 0; document.body.classList.remove("dragging");
-    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (f) openAny(f);
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) openMany(e.dataTransfer.files);
   });
 
   function kindOf(file) {
@@ -20892,6 +21022,7 @@ var __async = (__this, __arguments, generator) => {
     b.addEventListener("click", function () {
       newMenu.hidden = true;
       var what = b.getAttribute("data-new");
+      if (inTab && mode !== "start") { parent.postMessage({ pt: "newDoc", what: what }, "*"); return; }
       confirmDiscard().then(function (ok) {
         if (!ok) return;
         setDirty(false);
@@ -22704,7 +22835,16 @@ var __async = (__this, __arguments, generator) => {
     }).catch(function () {});
   }
 
+  if (inTab) {
+    window.addEventListener("message", function (e) {
+      var m = e.data;
+      if (e.source !== parent || !m || typeof m !== "object") return;
+      if (m.pt === "open" && m.file) { openAny(m.file); }
+      else if (m.pt === "new") { if (m.what === "doc") newDoc(); else newSheet(); }
+    });
+  }
   setMode("start");
+  if (inTab) parent.postMessage({ pt: "ready" }, "*");
 })();
 </script>
 </body>
