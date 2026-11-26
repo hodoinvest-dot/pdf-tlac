@@ -1,4 +1,4 @@
-const CACHE = 'pdf-tlac-v2';
+const CACHE = 'pdf-tlac-v3';
 const SHARED = 'pdf-tlac-shared';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png'];
 
