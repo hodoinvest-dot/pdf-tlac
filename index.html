@@ -99,7 +99,13 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .fmt button.on { background: var(--accent-soft); border-color: var(--accent); }
 .fmt .sep { width: 1px; align-self: stretch; background: var(--line); flex: none; margin: 4px 2px; }
 .fmt select { flex: none; }
-@media (min-width: 900px) { #toolsEdit { flex-wrap: wrap; overflow-x: visible; } }
+@media (min-width: 900px) { #toolsEdit, #toolsSheet, #toolsDoc { flex-wrap: wrap; overflow-x: visible; } }
+#toolsSheet label { display: inline-flex; align-items: center; gap: 6px; flex: none; white-space: nowrap; }
+#toolsSheet select { flex: none; }
+.colorbtn { position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; height: 38px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); cursor: pointer; flex: none; gap: 1px !important; }
+.colorbtn .cb-a { font: 700 15px/1 var(--font-body); }
+.colorbtn .cb-bar { width: 22px; height: 4px; border-radius: 2px; border: 1px solid rgba(0,0,0,.15); }
+.colorbtn input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; padding: 0; border: 0; }
 
 main { padding-block: 24px 48px; }
 
@@ -164,14 +170,25 @@ body.dragging .drop { border-color: var(--accent); background: var(--accent-soft
 .fbar .cname { font: 600 14px var(--font-body); color: var(--muted); min-width: 3.5em; text-align: center; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-variant-numeric: tabular-nums; }
 .fbar input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
 .sheet-wrap { overflow: auto; max-height: calc(100vh - 230px); min-height: 300px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
-table.xl { border-collapse: separate; border-spacing: 0; font: 14px/1.3 var(--font-body); }
+table.xl { border-collapse: separate; border-spacing: 0; font: 14px/1.3 var(--font-body); table-layout: fixed; background: var(--surface); }
 table.xl th { position: sticky; top: 0; z-index: 2; background: var(--bg); color: var(--muted); font-weight: 500; font-size: 12px; padding: 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 table.xl th.rh { position: sticky; left: 0; z-index: 1; min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
 table.xl th.corner { left: 0; z-index: 3; }
 table.xl td {
-  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 100px; max-width: 320px; height: 32px;
-  padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; background: var(--surface); color: var(--fg); cursor: cell;
+  border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); height: 32px;
+  padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; color: var(--fg); cursor: cell; vertical-align: bottom;
 }
+table.xl td.spill { overflow: visible; text-overflow: clip; position: relative; z-index: 1; }
+table.xl td.spill:focus { overflow: hidden; }
+table.xl td.insel { background-image: linear-gradient(rgba(31,94,255,.13), rgba(31,94,255,.13)); }
+table.xl th.hsel { background: var(--accent-soft); color: var(--accent); }
+table.xl thead th { position: sticky; }
+table.xl .rz { position: absolute; top: 0; right: -4px; width: 8px; height: 100%; cursor: col-resize; z-index: 4; }
+table.xl .rzr { position: absolute; left: 0; bottom: -4px; height: 8px; width: 100%; cursor: row-resize; z-index: 4; }
+table.xl .rz:hover, table.xl .rzr:hover, table.xl .rz.on, table.xl .rzr.on { background: var(--accent); opacity: .6; }
+.sheet-wrap.selecting { user-select: none; }
+.sheet-wrap.resizing, .sheet-wrap.resizing * { cursor: col-resize !important; user-select: none; }
+.sheet-wrap.resizing.rows, .sheet-wrap.resizing.rows * { cursor: row-resize !important; }
 table.xl td.num { text-align: right; font-variant-numeric: tabular-nums; }
 table.xl td.err { color: var(--danger); }
 table.xl td.bold { font-weight: 700; }
@@ -251,7 +268,6 @@ table.xl td:focus { box-shadow: inset 0 0 0 2px var(--accent); white-space: pre-
   .count { margin-left: 0; }
   .page-doc { padding: 22px 18px; min-height: 70vh; }
   .sheet-wrap { max-height: 65vh; }
-  table.xl td { min-width: 84px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
@@ -316,7 +332,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <span class="ver" title="Verzia apky">v6</span></h1>
+          <h1>PDF Tlač <span class="ver" title="Verzia apky">v7</span></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -409,10 +425,22 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
         <option value="h2">Nadpis 2</option>
         <option value="h3">Nadpis 3</option>
       </select>
+      <select id="wFont" title="Písmo" aria-label="Písmo">
+        <option value="">Písmo</option>
+        <option value="Calibri">Calibri</option><option value="Arial">Arial</option><option value="Times New Roman">Times New Roman</option>
+        <option value="Cambria">Cambria</option><option value="Georgia">Georgia</option><option value="Verdana">Verdana</option><option value="Tahoma">Tahoma</option><option value="Courier New">Courier New</option>
+      </select>
+      <select id="wSize" title="Veľkosť písma" aria-label="Veľkosť písma">
+        <option value="">Veľk.</option>
+        <option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>14</option><option>16</option><option>18</option><option>20</option><option>24</option><option>28</option><option>36</option><option>48</option><option>72</option>
+      </select>
       <span class="sep"></span>
       <button type="button" data-cmd="bold" title="Tučné (Ctrl+B)"><b>B</b></button>
       <button type="button" data-cmd="italic" title="Kurzíva (Ctrl+I)"><i>I</i></button>
       <button type="button" data-cmd="underline" title="Podčiarknuté (Ctrl+U)"><u>U</u></button>
+      <button type="button" data-cmd="strikeThrough" title="Prečiarknuté"><s>S</s></button>
+      <label class="colorbtn" title="Farba písma"><span class="cb-a">A</span><span class="cb-bar" id="wColorBar" style="background:#c00000"></span><input type="color" id="wColor" value="#c00000" aria-label="Farba písma"></label>
+      <label class="colorbtn" title="Zvýraznenie textu"><svg width="18" height="18" viewBox="0 0 24 24"><path d="m4 20 4-1 11-11-3-3L5 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="cb-bar" id="wHiBar" style="background:#ffff00"></span><input type="color" id="wHi" value="#ffff00" aria-label="Zvýraznenie"></label>
       <span class="sep"></span>
       <button type="button" data-cmd="insertUnorderedList" title="Odrážky">• Zoznam</button>
       <button type="button" data-cmd="insertOrderedList" title="Číslovanie">1. Zoznam</button>
@@ -420,27 +448,57 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
       <button type="button" data-cmd="justifyLeft" title="Zarovnať vľavo" aria-label="Zarovnať vľavo"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button type="button" data-cmd="justifyCenter" title="Na stred" aria-label="Na stred"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button type="button" data-cmd="justifyRight" title="Zarovnať vpravo" aria-label="Zarovnať vpravo"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button type="button" data-cmd="justifyFull" title="Do bloku" aria-label="Do bloku"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button type="button" data-cmd="outdent" title="Zmenšiť odsadenie" aria-label="Zmenšiť odsadenie"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M11 6h9M11 10h9M11 14h9M4 18h16M7 9l-3 3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button type="button" data-cmd="indent" title="Zväčšiť odsadenie" aria-label="Zväčšiť odsadenie"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M11 6h9M11 10h9M11 14h9M4 18h16M4 9l3 3-3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <span class="sep"></span>
+      <button type="button" data-cmd="removeFormat" title="Vymazať formátovanie">Vymazať formát</button>
       <button type="button" id="tableBtn" title="Vložiť tabuľku">Tabuľka</button>
       <button type="button" data-cmd="undo" title="Späť (Ctrl+Z)" aria-label="Späť"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button type="button" data-cmd="redo" title="Znova (Ctrl+Y)" aria-label="Znova"><svg width="18" height="18" viewBox="0 0 24 24"><path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
 
     <!-- Excel nástroje -->
-    <div class="tools" id="toolsSheet" hidden>
-      <label for="sheetSel">Hárok <select id="sheetSel"></select></label>
-      <span>
-        <button class="linkish" id="addRowBtn" type="button">+ Riadok</button>
-        <button class="linkish" id="addColBtn" type="button">+ Stĺpec</button>
-        <button class="linkish" id="boldCellBtn" type="button">Tučné</button>
-      </span>
+    <div class="tools fmt" id="toolsSheet" hidden>
+      <label class="sheetpick" for="sheetSel">Hárok <select id="sheetSel"></select></label>
+      <button type="button" data-xs="b" title="Tučné (Ctrl+B)"><b>B</b></button>
+      <button type="button" data-xs="i" title="Kurzíva (Ctrl+I)"><i>I</i></button>
+      <button type="button" data-xs="u" title="Podčiarknuté (Ctrl+U)"><u>U</u></button>
+      <select id="xSize" title="Veľkosť písma" aria-label="Veľkosť písma">
+        <option>8</option><option>9</option><option>10</option><option selected>11</option><option>12</option><option>14</option><option>16</option><option>18</option><option>20</option><option>24</option><option>28</option><option>36</option>
+      </select>
+      <label class="colorbtn" title="Farba písma"><span class="cb-a">A</span><span class="cb-bar" id="xColorBar" style="background:#c00000"></span><input type="color" id="xColor" value="#c00000" aria-label="Farba písma"></label>
+      <label class="colorbtn" title="Farba výplne bunky"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 11 12 4l7 7-7 7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M19 15c1 1.6 1.5 2.6 1.5 3.3a1.5 1.5 0 0 1-3 0c0-.7.5-1.7 1.5-3.3z" fill="currentColor"/></svg><span class="cb-bar" id="xFillBar" style="background:#ffff00"></span><input type="color" id="xFill" value="#ffff00" aria-label="Farba výplne"></label>
+      <span class="sep"></span>
+      <button type="button" data-xa="left" title="Zarovnať vľavo" aria-label="Zarovnať vľavo"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button type="button" data-xa="center" title="Na stred" aria-label="Na stred"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button type="button" data-xa="right" title="Zarovnať vpravo" aria-label="Zarovnať vpravo"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+      <button type="button" data-xs="wrap" title="Zalomiť text do viacerých riadkov">Zalomiť</button>
+      <button type="button" id="xMerge" title="Zlúčiť označené bunky (alebo zrušiť zlúčenie)">Zlúčiť</button>
+      <button type="button" data-xs="bd" title="Orámovať označené bunky">Orámovať</button>
+      <span class="sep"></span>
+      <select id="xNum" title="Formát čísla" aria-label="Formát čísla">
+        <option value="">Všeobecný</option>
+        <option value="#,##0.00">Číslo 1 234,00</option>
+        <option value='#,##0.00 "€"'>Mena 1 234,00 €</option>
+        <option value="0%">Percentá 10 %</option>
+        <option value="0.00%">Percentá 10,00 %</option>
+        <option value="custom" hidden>Vlastný</option>
+      </select>
+      <button type="button" id="xDecMore" title="Pridať desatinné miesto">,0+</button>
+      <button type="button" id="xDecLess" title="Ubrať desatinné miesto">,0−</button>
+      <button type="button" id="xClear" title="Vymazať formát označených buniek">Vymazať formát</button>
+      <span class="sep"></span>
+      <button type="button" id="addRowBtn">+ Riadky</button>
+      <button type="button" id="addColBtn">+ Stĺpec</button>
+      <span class="sep"></span>
       <label for="orient">Tlač
         <select id="orient">
           <option value="portrait">Na výšku</option>
           <option value="landscape">Na šírku</option>
         </select>
       </label>
-      <label for="gridLines"><input type="checkbox" id="gridLines" checked> Mriežka pri tlači</label>
+      <label for="gridLines" class="chk"><input type="checkbox" id="gridLines" checked> Mriežka pri tlači</label>
     </div>
   </div>
 </header>
@@ -22206,7 +22264,8 @@ var __async = (__this, __arguments, generator) => {
     setMode("doc", name);
     setTimeout(function () { editor.focus(); }, 30);
   }
-  function newDoc() { showDoc("", "Nový dokument.docx"); }
+  function newDoc() { showDoc("<p><br></p>", "Nový dokument.docx"); }
+  try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (e) {}
 
   function openDocx(file) {
     status("Otváram " + file.name + "…");
@@ -22231,6 +22290,50 @@ var __async = (__this, __arguments, generator) => {
   editor.addEventListener("mouseup", syncFmtState);
   document.addEventListener("selectionchange", function () { if (mode === "doc") syncFmtState(); });
 
+  // výber v dokumente si pamätáme, lebo kliknutie do zoznamu alebo farby ho zruší
+  var docRange = null;
+  document.addEventListener("selectionchange", function () {
+    var sl = getSelection(); if (mode !== "doc" || !sl.rangeCount) return;
+    var rg = sl.getRangeAt(0); if (editor.contains(rg.commonAncestorContainer)) docRange = rg.cloneRange();
+  });
+  function grabDocSel() { var sl = getSelection(); if (sl.rangeCount && editor.contains(sl.getRangeAt(0).commonAncestorContainer)) docRange = sl.getRangeAt(0).cloneRange(); }
+  editor.addEventListener("keyup", grabDocSel); editor.addEventListener("mouseup", grabDocSel);
+  $("toolsDoc").addEventListener("pointerdown", grabDocSel, true);
+  $("toolsDoc").addEventListener("focusin", function (e) { if (e.relatedTarget === editor) grabDocSel(); }, true);
+  function restoreDocSel() {
+    editor.focus();
+    if (docRange) { var sl = getSelection(); sl.removeAllRanges(); sl.addRange(docRange); }
+  }
+  function docCmd(cmd, val, css) {
+    restoreDocSel();
+    try { document.execCommand("styleWithCSS", false, css !== false); } catch (e) {}
+    document.execCommand(cmd, false, val);
+    try { document.execCommand("styleWithCSS", false, false); } catch (e) {}
+    editor.dispatchEvent(new Event("input")); syncFmtState();
+  }
+  $("wFont").addEventListener("change", function () { var v = $("wFont").value; if (v) docCmd("fontName", v); });
+  $("wSize").addEventListener("change", function () {
+    var v = $("wSize").value; if (!v) return;
+    // prehliadač pozná len 7 veľkostí, preto ich hneď nahradíme presnými bodmi
+    docCmd("fontSize", "7", false);
+    var made = [];
+    editor.querySelectorAll('font[size="7"]').forEach(function (f) {
+      var sp = document.createElement("span"); sp.style.fontSize = v + "pt"; made.push(sp);
+      if (f.color) sp.style.color = f.color; if (f.face) sp.style.fontFamily = f.face;
+      while (f.firstChild) sp.appendChild(f.firstChild);
+      f.parentNode.replaceChild(sp, f);
+      sp.querySelectorAll("span").forEach(function (x) { if (x.style.fontSize) x.style.fontSize = ""; });
+    });
+    if (made.length) {
+      // text zostane označený pre ďalšie úpravy
+      var rg = document.createRange(); rg.setStartBefore(made[0]); rg.setEndAfter(made[made.length - 1]);
+      var sl = getSelection(); sl.removeAllRanges(); sl.addRange(rg); docRange = rg.cloneRange();
+    }
+    editor.dispatchEvent(new Event("input"));
+  });
+  $("wColor").addEventListener("input", function () { $("wColorBar").style.background = $("wColor").value; docCmd("foreColor", $("wColor").value); });
+  $("wHi").addEventListener("input", function () { $("wHiBar").style.background = $("wHi").value; docCmd("hiliteColor", $("wHi").value); });
+
   document.querySelectorAll("#toolsDoc [data-cmd]").forEach(function (b) {
     b.addEventListener("mousedown", function (e) { e.preventDefault(); }); // nestratiť výber textu
     b.addEventListener("click", function () {
@@ -22254,7 +22357,7 @@ var __async = (__this, __arguments, generator) => {
     editor.dispatchEvent(new Event("input"));
   });
   function syncFmtState() {
-    ["bold", "italic", "underline", "insertUnorderedList", "insertOrderedList", "justifyLeft", "justifyCenter", "justifyRight"].forEach(function (c) {
+    ["bold", "italic", "underline", "strikeThrough", "insertUnorderedList", "insertOrderedList", "justifyLeft", "justifyCenter", "justifyRight", "justifyFull"].forEach(function (c) {
       var b = document.querySelector('#toolsDoc [data-cmd="' + c + '"]');
       try { if (b) b.classList.toggle("on", document.queryCommandState(c)); } catch (e) {}
     });
@@ -22262,6 +22365,15 @@ var __async = (__this, __arguments, generator) => {
       var v = (document.queryCommandValue("formatBlock") || "p").toLowerCase().replace(/[<>]/g, "");
       $("blockSel").value = /^h[1-3]$/.test(v) ? v : "p";
     } catch (e) {}
+    // písmo a veľkosť podľa miesta kurzora
+    var sl = getSelection();
+    if (sl.rangeCount && editor.contains(sl.anchorNode)) {
+      var el = sl.anchorNode.nodeType === 1 ? sl.anchorNode : sl.anchorNode.parentNode, cs = getComputedStyle(el);
+      var pt = Math.round(parseFloat(cs.fontSize) * 0.75 * 2) / 2;
+      $("wSize").value = Array.prototype.some.call($("wSize").options, function (o) { return o.value === String(pt); }) ? String(pt) : "";
+      var fam = cs.fontFamily.split(",")[0].replace(/["']/g, "").trim();
+      $("wFont").value = Array.prototype.some.call($("wFont").options, function (o) { return o.value === fam; }) ? fam : "";
+    }
   }
 
   // Prevod obsahu editora do skutočného .docx
@@ -22278,16 +22390,30 @@ var __async = (__this, __arguments, generator) => {
         for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
         return u;
       }
+      var indentTw = 0;
+      function cssPt(v) {
+        if (!v) return 0; var m = /^([\d.]+)(pt|px)$/.exec(v.trim()); if (!m) return 0;
+        return m[2] === "pt" ? +m[1] : +m[1] * 0.75;
+      }
+      function hexColor(v) {
+        if (!v) return ""; v = String(v).trim();
+        var m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v);
+        if (m) { var h = m[1]; if (h.length === 3) h = h.replace(/./g, "$&$&"); return h.toUpperCase(); }
+        m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(v);
+        if (m && (m[4] == null || +m[4] > 0)) return [m[1], m[2], m[3]].map(function (x) { return ("0" + (+x).toString(16)).slice(-2); }).join("").toUpperCase();
+        return "";
+      }
       function runs(node, st, out) {
         out = out || [];
         node.childNodes.forEach(function (n) {
           if (n.nodeType === 3) {
             var t = n.nodeValue.replace(/\s+/g, " ");
-            if (t) out.push(new D.TextRun({ text: t, bold: st.b, italics: st.i, underline: st.u ? {} : undefined, size: st.size }));
+            if (t) out.push(new D.TextRun({ text: t, bold: st.b, italics: st.i, underline: st.u ? {} : undefined, strike: st.s || undefined, size: st.size, color: st.color, font: st.font,
+              shading: st.hi ? { type: D.ShadingType.CLEAR, color: "auto", fill: st.hi } : undefined }));
             return;
           }
           if (n.nodeType !== 1) return;
-          var tag = n.tagName, s = { b: st.b, i: st.i, u: st.u, size: st.size };
+          var tag = n.tagName, s = { b: st.b, i: st.i, u: st.u, s: st.s, size: st.size, color: st.color, font: st.font, hi: st.hi };
           if (tag === "BR") { out.push(new D.TextRun({ text: "", break: 1 })); return; }
           if (tag === "IMG") {
             var bytes = dataUriBytes(n.getAttribute("src"));
@@ -22301,10 +22427,19 @@ var __async = (__this, __arguments, generator) => {
           if (tag === "B" || tag === "STRONG") s.b = true;
           if (tag === "I" || tag === "EM") s.i = true;
           if (tag === "U") s.u = true;
+          if (tag === "S" || tag === "STRIKE" || tag === "DEL") s.s = true;
           var cs = n.style || {};
           if (cs.fontWeight === "bold" || +cs.fontWeight >= 600) s.b = true;
+          if (cs.fontWeight === "normal" || cs.fontWeight === "400") s.b = false;
           if (cs.fontStyle === "italic") s.i = true;
-          if ((cs.textDecoration || "").indexOf("underline") >= 0) s.u = true;
+          var deco = (cs.textDecoration || "") + " " + (cs.textDecorationLine || "");
+          if (deco.indexOf("underline") >= 0) s.u = true;
+          if (deco.indexOf("line-through") >= 0) s.s = true;
+          var fsz = cssPt(cs.fontSize); if (fsz) s.size = Math.round(fsz * 2);
+          var col = hexColor(cs.color || (tag === "FONT" && n.getAttribute("color"))); if (col) s.color = col;
+          var bg = hexColor(cs.backgroundColor); if (bg && bg !== "FFFFFF") s.hi = bg;
+          var ff = cs.fontFamily || (tag === "FONT" && n.getAttribute("face")); if (ff) s.font = ff.split(",")[0].replace(/["']/g, "").trim();
+          if (tag === "MARK") s.hi = s.hi || "FFFF00";
           runs(n, s, out);
         });
         return out;
@@ -22312,6 +22447,9 @@ var __async = (__this, __arguments, generator) => {
       var HEAD = { H1: D.HeadingLevel.HEADING_1, H2: D.HeadingLevel.HEADING_2, H3: D.HeadingLevel.HEADING_3, H4: D.HeadingLevel.HEADING_4 };
       function para(el, extra) {
         var o = { children: runs(el, {}), alignment: align(el) };
+        var ml = el.style ? (parseFloat(el.style.marginLeft) || parseFloat(el.style.paddingLeft) || 0) : 0;
+        var ind = Math.round(ml * 15) + indentTw;
+        if (ind > 0) o.indent = { left: ind };
         if (extra) for (var k in extra) o[k] = extra[k];
         return new D.Paragraph(o);
       }
@@ -22347,7 +22485,12 @@ var __async = (__this, __arguments, generator) => {
           if (rows.length) out.push(new D.Table({ rows: rows, width: { size: 100, type: D.WidthType.PERCENTAGE } }));
           return;
         }
-        if ((tag === "DIV" || tag === "P" || tag === "BLOCKQUOTE") && el.querySelector("p,h1,h2,h3,h4,ul,ol,table,div")) { blockChildren(el, out, level); return; }
+        if (tag === "BLOCKQUOTE") {
+          // odsadenie (tlačidlo Zväčšiť odsadenie)
+          indentTw += 720; blockChildren(el, out, level); indentTw -= 720;
+          return;
+        }
+        if ((tag === "DIV" || tag === "P") && el.querySelector("p,h1,h2,h3,h4,ul,ol,table,div")) { blockChildren(el, out, level); return; }
         out.push(para(el));
       }
       // voľný text a inline prvky zoskupíme do odsekov, bloky spracujeme samostatne
@@ -22386,7 +22529,7 @@ var __async = (__this, __arguments, generator) => {
   function blankSheet(name, rows, cols) {
     var cells = [];
     for (var r = 0; r < rows; r++) { cells.push(new Array(cols).fill("")); }
-    return { name: name, cells: cells, cache: [], bold: {} };
+    return { name: name, cells: cells, cache: [], bold: {}, fmt: {}, style: {}, merges: [], colW: [], rowH: [] };
   }
   function curSheet() { return book.sheets[book.active]; }
 
@@ -22398,31 +22541,13 @@ var __async = (__this, __arguments, generator) => {
   function openSheet(file) {
     status("Otváram " + file.name + "…");
     Promise.all([file.arrayBuffer(), loadLib("lib-xlsx", "XLSX")]).then(function (r) {
-      var X = r[1];
-      var wb = X.read(new Uint8Array(r[0]), { type: "array", cellDates: true, cellFormula: true, cellStyles: false });
-      var sheets = wb.SheetNames.map(function (sn) {
-        var ws = wb.Sheets[sn];
-        var ref = ws["!ref"] ? X.utils.decode_range(ws["!ref"]) : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
-        var rows = Math.max(ref.e.r + 1, 20), cols = Math.max(ref.e.c + 1, 6);
-        var sh = blankSheet(sn, rows + 5, cols + 1);
-        for (var R = 0; R <= ref.e.r; R++) {
-          sh.cache[R] = [];
-          for (var C = 0; C <= ref.e.c; C++) {
-            var cell = ws[X.utils.encode_cell({ r: R, c: C })];
-            if (!cell) continue;
-            var raw = "";
-            if (cell.f) raw = "=" + cell.f;
-            else if (cell.t === "n") raw = String(cell.v);
-            else if (cell.t === "d") raw = cell.w || (cell.v instanceof Date ? cell.v.toLocaleDateString("sk-SK") : String(cell.v));
-            else if (cell.t === "b") raw = cell.v ? "PRAVDA" : "NEPRAVDA";
-            else if (cell.t === "e") raw = cell.w || "#CHYBA";
-            else raw = cell.v == null ? "" : String(cell.v);
-            sh.cells[R][C] = raw;
-            if (cell.f) sh.cache[R][C] = cell.w != null ? cell.w : (cell.v != null ? String(cell.v) : "");
-          }
-        }
-        return sh;
-      });
+      var X = r[1], data = new Uint8Array(r[0]), sheets;
+      if (/\.csv$/i.test(file.name) || file.type === "text/csv") sheets = [csvSheet(data, baseName(file.name))];
+      else {
+        var wb = X.read(data, { type: "array", cellDates: false, cellFormula: true, cellStyles: true, cellNF: true });
+        var styles = /\.(xlsx|xlsm)$/i.test(file.name) ? readXlsxStyles(X, data) : {};
+        sheets = wb.SheetNames.map(function (sn) { return importSheet(X, wb.Sheets[sn], sn, styles[sn] || {}); });
+      }
       book = { name: file.name.replace(/\.(xls|csv|ods|xlsm)$/i, ".xlsx"), sheets: sheets.length ? sheets : [blankSheet("Hárok1", 30, 8)], active: 0 };
       showSheet();
       status("Tabuľka je otvorená. Môžeš písať do buniek.", false, 3500);
@@ -22430,6 +22555,163 @@ var __async = (__this, __arguments, generator) => {
       console.error(e);
       status("Excel súbor sa nepodarilo otvoriť. Môže byť poškodený alebo zaheslovaný.", true, 6000);
     });
+  }
+
+  // dátum z Excelu (počet dní od 30.12.1899)
+  function serialToDate(n) { return new Date(Math.round((n - 25569) * 86400000)); }
+  function dateToSerial(d) { return d.getTime() / 86400000 + 25569; }
+  function fmtDate(n, z) {
+    var d = serialToDate(n), p2 = function (x) { return (x < 10 ? "0" : "") + x; };
+    var Y = d.getUTCFullYear(), M = d.getUTCMonth() + 1, D = d.getUTCDate(), h = d.getUTCHours(), mi = d.getUTCMinutes(), se = d.getUTCSeconds();
+    var hasTime = /h/i.test(z || ""), hasDate = /[dy]/i.test(z || "") || !hasTime;
+    var out = hasDate ? D + "." + M + "." + Y : "";
+    if (hasTime) out += (out ? " " : "") + h + ":" + p2(mi) + (/s/i.test(z.replace(/\[.*?\]/g, "")) ? ":" + p2(se) : "");
+    return out;
+  }
+  function isDateFmt(z) {
+    if (!z || z === "General") return false;
+    var t = z.replace(/"[^"]*"/g, "").replace(/\[[^\]]*\]/g, "").replace(/\\./g, "");
+    return /[dyhs]/i.test(t) || /^m+$/i.test(t.trim());
+  }
+  // číslo podľa formátu z Excelu, ale so slovenskými oddeľovačmi
+  function numFmt(v, z) {
+    if (!z || z === "General" || !window.XLSX) return fmt(v);
+    if (isDateFmt(z)) return fmtDate(v, z);
+    try {
+      var t = XLSX.SSF.format(z, v);
+      return t.replace(/(\d),(?=\d{3}(?:\D|$))/g, "$1 ").replace(/(\d),(?=\d{3}(?:\D|$))/g, "$1 ").replace(/(\d)\.(\d)/g, "$1,$2");
+    } catch (e) { return fmt(v); }
+  }
+
+  function importSheet(X, ws, sn, st) {
+    var ref = ws["!ref"] ? X.utils.decode_range(ws["!ref"]) : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } };
+    var rows = Math.max(ref.e.r + 1, 20), cols = Math.max(ref.e.c + 1, 6);
+    var sh = blankSheet(sn, rows + 5, cols + 1);
+    for (var R = 0; R <= ref.e.r; R++) {
+      sh.cache[R] = [];
+      for (var C = 0; C <= ref.e.c; C++) {
+        var cell = ws[X.utils.encode_cell({ r: R, c: C })], k = R + "," + C;
+        if (!cell) continue;
+        var raw = "", z = cell.z && cell.z !== "General" ? String(cell.z) : "";
+        if (cell.f) { raw = "=" + cell.f; if (z) sh.fmt[k] = z; }
+        else if (cell.t === "n" && z && isDateFmt(z)) raw = fmtDate(cell.v, z);
+        else if (cell.t === "n") { raw = String(+cell.v.toPrecision(15)); if (z) sh.fmt[k] = z; }
+        else if (cell.t === "d") raw = cell.v instanceof Date ? cell.v.toLocaleDateString("sk-SK") : String(cell.v);
+        else if (cell.t === "b") raw = cell.v ? "PRAVDA" : "NEPRAVDA";
+        else if (cell.t === "e") raw = cell.w || "#CHYBA";
+        else raw = cell.v == null ? "" : String(cell.v);
+        sh.cells[R][C] = raw;
+        if (cell.f) sh.cache[R][C] = cell.v != null && cell.t !== "z" ? (typeof cell.v === "number" ? numFmt(cell.v, z) : String(cell.v)) : "";
+      }
+    }
+    (ws["!merges"] || []).forEach(function (m) { if (m.e.r > m.s.r || m.e.c > m.s.c) sh.merges.push({ r: m.s.r, c: m.s.c, r2: m.e.r, c2: m.e.c }); });
+    (ws["!cols"] || []).forEach(function (col, i) {
+      if (!col) return;
+      if (col.hidden) sh.colW[i] = 0;
+      else if (col.width || col.wch) sh.colW[i] = Math.round((col.width || col.wch + 0.83) * 8 + 8);
+      else if (col.wpx) sh.colW[i] = Math.round(col.wpx * 1.2);
+    });
+    (ws["!rows"] || []).forEach(function (rw, i) { if (rw && rw.hpx && i < sh.cells.length) sh.rowH[i] = Math.max(20, Math.round(rw.hpx * 1.25)); else if (rw && rw.hpt && i < sh.cells.length) sh.rowH[i] = Math.max(20, Math.round(rw.hpt * 1.67)); });
+    Object.keys(st).forEach(function (k) {
+      var a = k.split(","); if (+a[0] >= sh.cells.length || +a[1] >= sh.cells[0].length) return;
+      var x = st[k]; if (x.b) sh.bold[k] = 1;
+      var y = {}; ["i", "sz", "al", "va", "wrap", "fill", "color", "u", "bd"].forEach(function (p) { if (x[p]) y[p] = x[p]; });
+      if (Object.keys(y).length) sh.style[k] = y;
+    });
+    return sh;
+  }
+
+  // písmo, zarovnanie a farby priamo z xlsx (bezplatná verzia knižnice ich nečíta)
+  function readXlsxStyles(X, data) {
+    var out = {};
+    try {
+      var zip = X.CFB.read(data, { type: "array" });
+      var xml = function (p) {
+        var f = X.CFB.find(zip, "/" + p.replace(/^\//, ""));
+        return f && f.content ? new DOMParser().parseFromString(new TextDecoder().decode(f.content), "application/xml") : null;
+      };
+      var els = function (n, name) { return n ? Array.prototype.slice.call(n.getElementsByTagNameNS("*", name)) : []; };
+      var one = function (n, name) { return els(n, name)[0] || null; };
+      var rgb = function (n) { var v = n && n.getAttribute("rgb"); return v && v.length >= 6 ? "#" + v.slice(-6) : ""; };
+      var styles = xml("xl/styles.xml"), wbx = xml("xl/workbook.xml"), rels = xml("xl/_rels/workbook.xml.rels");
+      if (!styles || !wbx || !rels) return out;
+      var fonts = els(one(styles, "fonts"), "font").map(function (f) {
+        var b = one(f, "b"), i = one(f, "i"), u = one(f, "u"), sz = one(f, "sz"), col = one(f, "color");
+        var on = function (n) { return n && n.getAttribute("val") !== "0" && n.getAttribute("val") !== "false"; };
+        return { b: on(b), i: on(i), u: on(u), sz: sz ? +sz.getAttribute("val") : 0, color: rgb(col) };
+      });
+      var fills = els(one(styles, "fills"), "fill").map(function (f) {
+        var pf = one(f, "patternFill"); if (!pf || pf.getAttribute("patternType") !== "solid") return "";
+        return rgb(one(pf, "fgColor"));
+      });
+      var borders = els(one(styles, "borders"), "border").map(function (b) {
+        return ["left", "right", "top", "bottom"].filter(function (side) { var n = one(b, side); return n && n.getAttribute("style") && n.getAttribute("style") !== "none"; }).length >= 2;
+      });
+      var xfs = els(one(styles, "cellXfs"), "xf").map(function (x) {
+        var f = fonts[+x.getAttribute("fontId") || 0] || {}, al = one(x, "alignment"), o = {};
+        if (f.b) o.b = 1; if (f.i) o.i = 1; if (f.u) o.u = 1;
+        if (f.sz && f.sz !== 11) o.sz = f.sz;
+        if (f.color && f.color !== "#000000") o.color = f.color;
+        var fill = fills[+x.getAttribute("fillId") || 0]; if (fill && fill.toUpperCase() !== "#FFFFFF") o.fill = fill;
+        if (al) {
+          var h = al.getAttribute("horizontal"); if (h && h !== "general") o.al = h === "centerContinuous" ? "center" : h;
+          var v = al.getAttribute("vertical"); if (v) o.va = v;
+          if (al.getAttribute("wrapText") === "1" || al.getAttribute("wrapText") === "true") o.wrap = 1;
+        }
+        var bd = borders[+x.getAttribute("borderId") || 0]; if (bd) o.bd = 1;
+        return o;
+      });
+      var targets = {};
+      els(rels, "Relationship").forEach(function (r) { targets[r.getAttribute("Id")] = r.getAttribute("Target"); });
+      els(wbx, "sheet").forEach(function (sn) {
+        var rid = sn.getAttribute("r:id") || sn.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+        var t = targets[rid]; if (!t) return;
+        var path = t.charAt(0) === "/" ? t.slice(1) : "xl/" + t;
+        var doc = xml(path); if (!doc) return;
+        var map = {};
+        els(doc, "c").forEach(function (c) {
+          var si = +c.getAttribute("s") || 0; if (!si) return;
+          var x = xfs[si]; if (!x || !Object.keys(x).length) return;
+          var a = XLSX.utils.decode_cell(c.getAttribute("r"));
+          map[a.r + "," + a.c] = x;
+        });
+        out[sn.getAttribute("name")] = map;
+      });
+    } catch (e) { console.warn("styles", e); }
+    return out;
+  }
+
+  // CSV: slovenské súbory z Excelu bývajú v kódovaní Windows-1250 a s bodkočiarkou
+  function csvSheet(data, name) {
+    var text;
+    try { text = new TextDecoder("utf-8", { fatal: true }).decode(data); }
+    catch (e) { text = new TextDecoder("windows-1250").decode(data); }
+    text = text.replace(/^﻿/, "");
+    var first = text.split(/\r?\n/)[0] || "", sep = ";";
+    if (/^sep=(.)/i.test(first)) { sep = first.charAt(4); text = text.slice(first.length).replace(/^\r?\n/, ""); }
+    else {
+      var cnt = function (ch) { return first.replace(/"[^"]*"/g, "").split(ch).length - 1; };
+      var best = [[";", cnt(";")], ["\t", cnt("\t")], [",", cnt(",")]].sort(function (a, b) { return b[1] - a[1]; })[0];
+      if (best[1] > 0) sep = best[0];
+    }
+    var rows = [], row = [], cur = "", q = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (q) {
+        if (ch === '"') { if (text.charAt(i + 1) === '"') { cur += '"'; i++; } else q = false; }
+        else cur += ch;
+      } else if (ch === '"' && cur === "") q = true;
+      else if (ch === sep) { row.push(cur); cur = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text.charAt(i + 1) === "\n") i++;
+        row.push(cur); rows.push(row); row = []; cur = "";
+      } else cur += ch;
+    }
+    if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+    var cols = Math.max.apply(null, [1].concat(rows.map(function (r) { return r.length; })));
+    var sh = blankSheet(name.slice(0, 31) || "Hárok1", Math.max(rows.length, 20) + 5, Math.max(cols, 6) + 1);
+    rows.forEach(function (r, ri) { r.forEach(function (v, ci) { sh.cells[ri][ci] = v; }); });
+    return sh;
   }
 
   // ---- vzorce ----
@@ -22502,7 +22784,7 @@ var __async = (__this, __arguments, generator) => {
   }
   function fmt(v) {
     if (typeof v === "number") {
-      var s = Math.abs(v) >= 1e15 ? v.toExponential(4) : v.toLocaleString("sk-SK", { maximumFractionDigits: 6 });
+      var s = Math.abs(v) >= 1e15 ? v.toExponential(4) : v.toLocaleString("sk-SK", { maximumFractionDigits: 10, useGrouping: false });
       return s;
     }
     return String(v);
@@ -22510,7 +22792,7 @@ var __async = (__this, __arguments, generator) => {
   function shown(sh, r, c) {
     var raw = (sh.cells[r] && sh.cells[r][c]) || "";
     if (raw.charAt(0) === "=") {
-      try { var v = evalCell(sh, r, c, {}); return { text: fmt(v), num: typeof v === "number" }; }
+      try { var v = evalCell(sh, r, c, {}); return { text: typeof v === "number" ? numFmt(v, sh.fmt && sh.fmt[r + "," + c]) : fmt(v), num: typeof v === "number" }; }
       catch (e) {
         var cached = sh.cache[r] && sh.cache[r][c];
         if (cached != null && cached !== "") return { text: cached, num: !isNaN(toNum(cached)) };
@@ -22518,7 +22800,7 @@ var __async = (__this, __arguments, generator) => {
       }
     }
     var n = toNum(raw);
-    if (raw !== "" && !isNaN(n) && /^-?\d+(\.\d+)?$/.test(raw.trim())) return { text: fmt(n), num: true };
+    if (raw !== "" && !isNaN(n) && /^-?\d+(\.\d+)?(e-?\d+)?$/i.test(raw.trim())) return { text: numFmt(n, sh.fmt && sh.fmt[r + "," + c]), num: true };
     return { text: raw, num: raw !== "" && !isNaN(n) };
   }
 
@@ -22535,21 +22817,92 @@ var __async = (__this, __arguments, generator) => {
   }
   $("sheetSel").addEventListener("change", function () { book.active = +$("sheetSel").value; active = { r: 0, c: 0 }; renderSheet(); });
 
+  function fillSheetDefaults(sh) { sh.fmt = sh.fmt || {}; sh.style = sh.style || {}; sh.merges = sh.merges || []; sh.colW = sh.colW || []; sh.rowH = sh.rowH || []; sh.bold = sh.bold || {}; }
+  // zlúčené bunky: ľavá horná je hlavná, ostatné sa skryjú
+  function mergeCover(sh, rows, cols) {
+    var cover = {};
+    sh.merges.forEach(function (m) {
+      if (m.r >= rows || m.c >= cols) return;
+      var r2 = Math.min(m.r2, rows - 1), c2 = Math.min(m.c2, cols - 1);
+      cover[m.r + "," + m.c] = { rs: r2 - m.r + 1, cs: c2 - m.c + 1 };
+      for (var r = m.r; r <= r2; r++) for (var c = m.c; c <= c2; c++) if (r !== m.r || c !== m.c) cover[r + "," + c] = { master: true, r: m.r, c: m.c };
+    });
+    return cover;
+  }
+  // šírky stĺpcov: zo súboru, inak podľa najdlhšieho textu
+  function columnWidths(sh, cols) {
+    var narrow = window.matchMedia && matchMedia("(max-width: 640px)").matches, def = narrow ? 84 : 100;
+    var inMerge = {};
+    sh.merges.forEach(function (m) { if (m.c2 > m.c) for (var r = m.r; r <= m.r2; r++) inMerge[r + "," + m.c] = 1; });
+    var out = [], lim = Math.min(sh.cells.length, 300);
+    memo = {};
+    try {
+      for (var c = 0; c < cols; c++) {
+        if (sh.colW[c] != null) { out[c] = sh.colW[c]; continue; }
+        var w = 0;
+        for (var r = 0; r < lim; r++) {
+          var raw = sh.cells[r][c]; if (raw === "" || raw == null || inMerge[r + "," + c]) continue;
+          var st = sh.style[r + "," + c] || {};
+          if (st.wrap) continue;
+          var len = shown(sh, r, c).text.length * ((st.sz || 11) / 11) * (sh.bold[r + "," + c] ? 8.6 : 8);
+          if (len > w) w = len;
+        }
+        out[c] = Math.max(def, Math.min(Math.round(w + 20), 380));
+      }
+    } finally { memo = null; }
+    return out;
+  }
+  function cellCss(sh, k, num, forPrint) {
+    var st = sh.style[k], css = "";
+    if (sh.bold[k]) css += "font-weight:700;";
+    if (st) {
+      if (st.i) css += "font-style:italic;";
+      if (st.u) css += "text-decoration:underline;";
+      if (st.sz) css += "font-size:" + (forPrint ? (st.sz * 10 / 11).toFixed(1) + "pt;" : (st.sz * 14 / 11).toFixed(1) + "px;");
+      if (st.al) css += "text-align:" + (st.al === "fill" || st.al === "distributed" ? "left" : st.al) + ";";
+      if (st.va) css += "vertical-align:" + (st.va === "center" ? "middle" : st.va === "top" ? "top" : "bottom") + ";";
+      if (st.wrap) css += "white-space:pre-wrap;";
+      if (st.fill) css += "background-color:" + st.fill + ";";
+      if (st.color) css += "color:" + st.color + ";";
+      if (st.bd) {
+        var a = k.split(","), r = +a[0], c = +a[1], up = sh.style[(r - 1) + "," + c], lf = sh.style[r + "," + (c - 1)], sh2 = [];
+        css += "border-right:1px solid #222;border-bottom:1px solid #222;";
+        if (forPrint) css += "border-top:1px solid #222;border-left:1px solid #222;";
+        else {
+          if (!(up && up.bd)) sh2.push("inset 0 1px 0 #222");
+          if (!(lf && lf.bd)) sh2.push("inset 1px 0 0 #222");
+          if (sh2.length) css += "box-shadow:" + sh2.join(",") + ";";
+        }
+      }
+    }
+    return css;
+  }
   function renderSheet() {
     var sh = curSheet(), rows = Math.min(sh.cells.length, MAX_RENDER), cols = sh.cells[0] ? sh.cells[0].length : 0;
     var t = document.createElement("table"); t.className = "xl";
-    var head = "<thead><tr><th class=\"rh corner\"></th>";
-    for (var c = 0; c < cols; c++) head += "<th>" + colName(c) + "</th>";
+    fillSheetDefaults(sh);
+    var widths = columnWidths(sh, cols), total = 46;
+    var cg = "<colgroup><col style=\"width:46px\">";
+    for (var ci = 0; ci < cols; ci++) { cg += "<col style=\"width:" + widths[ci] + "px" + (widths[ci] === 0 ? ";visibility:collapse" : "") + "\">"; total += widths[ci]; }
+    t.style.width = total + "px";
+    var head = cg + "</colgroup><thead><tr><th class=\"rh corner\"></th>";
+    for (var c = 0; c < cols; c++) head += "<th data-col=\"" + c + "\">" + colName(c) + "<span class=\"rz\" data-rz=\"" + c + "\"></span></th>";
     t.innerHTML = head + "</tr></thead>";
     var tb = document.createElement("tbody");
+    var cover = mergeCover(sh, rows, cols);
     tds = [];
     for (var r = 0; r < rows; r++) {
       var tr = document.createElement("tr");
-      var th = document.createElement("th"); th.className = "rh"; th.textContent = r + 1; tr.appendChild(th);
+      var th = document.createElement("th"); th.className = "rh"; th.dataset.row = r; th.textContent = r + 1;
+      var rzr = document.createElement("span"); rzr.className = "rzr"; rzr.dataset.rzr = r; th.appendChild(rzr); tr.appendChild(th);
+      if (sh.rowH[r]) tr.style.height = sh.rowH[r] + "px";
       tds[r] = [];
       for (c = 0; c < cols; c++) {
+        var cv = cover[r + "," + c];
+        if (cv && cv.master) { tds[r][c] = tds[cv.r][cv.c]; continue; }
         var td = document.createElement("td");
         td.contentEditable = "true"; td.dataset.r = r; td.dataset.c = c; td.spellcheck = false;
+        if (cv) { td.rowSpan = cv.rs; td.colSpan = cv.cs; }
         tr.appendChild(td); tds[r][c] = td;
       }
       tb.appendChild(tr);
@@ -22560,23 +22913,89 @@ var __async = (__this, __arguments, generator) => {
     $("sheetNote").textContent = (sh.cells.length > MAX_RENDER ? "Zobrazených je prvých " + MAX_RENDER + " riadkov. " : "") +
       "Vzorce: =SUM(A1:A5), =AVERAGE(), =MIN(), =MAX(), =COUNT(), aj +, −, *, /. Enter = ďalší riadok, Tab = ďalší stĺpec.";
     selectCell(active.r, active.c, false);
+    showSel();
   }
   function paint(r, c) {
     var td = tds[r] && tds[r][c]; if (!td) return;
-    var sh = curSheet();
-    if (document.activeElement === td) return;
+    if (+td.dataset.r !== r || +td.dataset.c !== c) return; // zakrytá zlúčením
+    var sh = curSheet(), k = r + "," + c;
+    if (document.activeElement === td) { td.style.cssText = cellCss(sh, k, false); return; }
     var s = shown(sh, r, c);
     td.textContent = s.text;
     td.classList.toggle("num", !!s.num);
     td.classList.toggle("err", !!s.err);
-    td.classList.toggle("bold", !!sh.bold[r + "," + c]);
+    td.classList.remove("bold");
+    td.style.cssText = cellCss(sh, k, s.num);
+    // dlhý text pokračuje do prázdnej bunky vedľa, ako v Exceli
+    var nx = sh.cells[r][c + 1];
+    td.classList.toggle("spill", !s.num && s.text !== "" && td.colSpan === 1 && (nx === "" || nx == null) && !(sh.style[k] && sh.style[k].wrap) && (!sh.style[k] || !sh.style[k].al || sh.style[k].al === "left"));
   }
   function refreshAll() { memo = {}; try { for (var r = 0; r < tds.length; r++) for (var c = 0; c < tds[r].length; c++) paint(r, c); } finally { memo = null; } }
 
+  // ---- výber viacerých buniek ----
+  var sel = { r1: 0, c1: 0, r2: 0, c2: 0 }, selKeep = false;
+  function normSel(a, b) { return { r1: Math.min(a.r, b.r), c1: Math.min(a.c, b.c), r2: Math.max(a.r, b.r), c2: Math.max(a.c, b.c) }; }
+  function setSel(a, b) {
+    var x = normSel(a, b), sh = curSheet();
+    // výber rozšírime o celé zlúčené bunky
+    sh.merges.forEach(function (m) { if (m.r <= x.r2 && m.r2 >= x.r1 && m.c <= x.c2 && m.c2 >= x.c1) { x.r1 = Math.min(x.r1, m.r); x.c1 = Math.min(x.c1, m.c); x.r2 = Math.max(x.r2, m.r2); x.c2 = Math.max(x.c2, m.c2); } });
+    sel = x; showSel(); updateRibbon();
+  }
+  var selPainted = [];
+  function showSel() {
+    selPainted.forEach(function (el) { el.classList.remove("insel"); el.classList.remove("hsel"); }); selPainted = [];
+    if (!tds.length) return;
+    var single = sel.r1 === sel.r2 && sel.c1 === sel.c2 || (tds[sel.r1] && tds[sel.r1][sel.c1] && tds[sel.r1][sel.c1].rowSpan === sel.r2 - sel.r1 + 1 && tds[sel.r1][sel.c1].colSpan === sel.c2 - sel.c1 + 1);
+    var tb = $("sheetWrap").querySelector("table.xl"); if (!tb) return;
+    var heads = tb.tHead.rows[0].cells, rowsEl = tb.tBodies[0].rows;
+    for (var c = sel.c1; c <= Math.min(sel.c2, tds[0].length - 1); c++) { var h = heads[c + 1]; if (h) { h.classList.add("hsel"); selPainted.push(h); } }
+    for (var r = sel.r1; r <= Math.min(sel.r2, tds.length - 1); r++) {
+      var rh = rowsEl[r] && rowsEl[r].cells[0]; if (rh) { rh.classList.add("hsel"); selPainted.push(rh); }
+      if (single) continue;
+      for (c = sel.c1; c <= Math.min(sel.c2, tds[0].length - 1); c++) { var td = tds[r][c]; if (td && +td.dataset.r === r && +td.dataset.c === c) { td.classList.add("insel"); selPainted.push(td); } }
+    }
+    var multi = !single;
+    $("cellName").textContent = multi ? colName(sel.c1) + (sel.r1 + 1) + ":" + colName(sel.c2) + (sel.r2 + 1) : colName(active.c) + (active.r + 1);
+  }
+  function forSel(fn) {
+    var sh = curSheet(), r2 = Math.min(sel.r2, sh.cells.length - 1), c2 = Math.min(sel.c2, sh.cells[0].length - 1);
+    for (var r = sel.r1; r <= r2; r++) for (var c = sel.c1; c <= c2; c++) fn(r, c, r + "," + c, sh);
+  }
+  function stOf(sh, k) { return sh.style[k] || (sh.style[k] = {}); }
+  function cleanSt(sh, k) { var st = sh.style[k]; if (st && !Object.keys(st).some(function (p) { return st[p]; })) delete sh.style[k]; }
+  function afterFormat() { setDirty(true); autosaveSheet(); refreshAll(); updateRibbon(); }
+  function toggleProp(p) {
+    var sh = curSheet(), k0 = active.r + "," + active.c;
+    var on = p === "b" ? !sh.bold[k0] : !(sh.style[k0] && sh.style[k0][p]);
+    forSel(function (r, c, k) {
+      if (p === "b") { if (on) sh.bold[k] = 1; else delete sh.bold[k]; }
+      else { var st = stOf(sh, k); if (on) st[p] = 1; else delete st[p]; cleanSt(sh, k); }
+    });
+    afterFormat();
+  }
+  function setProp(p, v) {
+    forSel(function (r, c, k, sh) { var st = stOf(sh, k); if (v == null || v === "") delete st[p]; else st[p] = v; cleanSt(sh, k); });
+    afterFormat();
+  }
+  function updateRibbon() {
+    if (!book) return;
+    var sh = curSheet(), k = active.r + "," + active.c, st = sh.style[k] || {};
+    document.querySelectorAll("#toolsSheet [data-xs]").forEach(function (b) { var p = b.getAttribute("data-xs"); b.classList.toggle("on", p === "b" ? !!sh.bold[k] : !!st[p]); });
+    document.querySelectorAll("#toolsSheet [data-xa]").forEach(function (b) { b.classList.toggle("on", st.al === b.getAttribute("data-xa")); });
+    $("xSize").value = String(st.sz || 11);
+    var z = sh.fmt[k] || "", opt = Array.prototype.some.call($("xNum").options, function (o) { return o.value === z && o.value !== "custom"; });
+    $("xNum").value = opt ? z : "custom";
+    var mt = tds[active.r] && tds[active.r][active.c];
+    $("xMerge").classList.toggle("on", !!(mt && (mt.rowSpan > 1 || mt.colSpan > 1)));
+  }
   function selectCell(r, c, focus) {
     var sh = curSheet();
     r = Math.max(0, Math.min(r, tds.length - 1)); c = Math.max(0, Math.min(c, tds[0].length - 1));
+    var mt = tds[r][c]; if (mt) { r = +mt.dataset.r; c = +mt.dataset.c; }
     active = { r: r, c: c };
+    if (!selKeep) sel = { r1: r, c1: c, r2: r, c2: c };
+    if (sel.r1 === r && sel.c1 === c && sel.r2 === r && sel.c2 === c) { var mm = tds[r][c]; if (mm) { sel.r2 = r + mm.rowSpan - 1; sel.c2 = c + mm.colSpan - 1; } }
+    showSel(); updateRibbon();
     $("cellName").textContent = colName(c) + (r + 1);
     $("fx").value = sh.cells[r][c] || "";
     if (focus) {
@@ -22599,7 +23018,7 @@ var __async = (__this, __arguments, generator) => {
   function autosaveSheet() {
     clearTimeout(sheetT);
     sheetT = setTimeout(function () {
-      var light = { name: book.name, active: book.active, sheets: book.sheets.map(function (s) { return { name: s.name, cells: s.cells, bold: s.bold }; }) };
+      var light = { name: book.name, active: book.active, sheets: book.sheets.map(function (s) { return { name: s.name, cells: s.cells, bold: s.bold, fmt: s.fmt, style: s.style, merges: s.merges, colW: s.colW, rowH: s.rowH }; }) };
       store(SHEET_KEY, JSON.stringify({ book: light, t: Date.now() }));
     }, 600);
   }
@@ -22611,6 +23030,8 @@ var __async = (__this, __arguments, generator) => {
     selectCell(r, c, false);
     td.textContent = curSheet().cells[r][c] || "";
     td.classList.remove("err");
+    delete td.dataset.edited;
+    if (!dragSel) { try { var rg = document.createRange(); rg.selectNodeContents(td); var ss = getSelection(); ss.removeAllRanges(); ss.addRange(rg); } catch (er) {} }
   });
   wrapEl.addEventListener("focusout", function (e) {
     var td = e.target.closest("td"); if (!td) return;
@@ -22619,13 +23040,118 @@ var __async = (__this, __arguments, generator) => {
     setTimeout(function () { commit(r, c, raw); paint(r, c); }, 0);
   });
   wrapEl.addEventListener("input", function (e) {
-    var td = e.target.closest("td"); if (td) $("fx").value = td.innerText;
+    var td = e.target.closest("td"); if (td) { td.dataset.edited = "1"; $("fx").value = td.innerText; }
+  });
+  function clearSel() {
+    var sh = curSheet();
+    forSel(function (r, c, k) { sh.cells[r][c] = ""; if (sh.cache[r]) sh.cache[r][c] = undefined; });
+    setDirty(true); autosaveSheet();
+    var a = document.activeElement; if (a && a.tagName === "TD") a.textContent = "";
+    $("fx").value = ""; refreshAll();
+  }
+  // kopírovanie viacerých buniek (Ctrl+C) ako tabuľka, vloží sa aj do Excelu
+  wrapEl.addEventListener("copy", function (e) {
+    if (sel.r1 === sel.r2 && sel.c1 === sel.c2) return;
+    var sh = curSheet(), lines = [];
+    memo = {};
+    try { for (var r = sel.r1; r <= sel.r2; r++) { var row = []; for (var c = sel.c1; c <= sel.c2; c++) row.push(shown(sh, r, c).text); lines.push(row.join("\t")); } }
+    finally { memo = null; }
+    e.clipboardData.setData("text/plain", lines.join("\n")); e.preventDefault();
+  });
+  // ťahanie myšou = výber oblasti, Shift+klik = rozšírenie
+  var dragSel = null;
+  wrapEl.addEventListener("pointerdown", function (e) {
+    if (e.target.closest(".rz, .rzr")) return;
+    var th = e.target.closest("th");
+    if (th && book) {
+      e.preventDefault();
+      var sh = curSheet(), lastR = tds.length - 1, lastC = tds[0].length - 1;
+      if (th.classList.contains("corner")) { selKeep = true; selectCell(0, 0, true); selKeep = false; setSel({ r: 0, c: 0 }, { r: lastR, c: lastC }); return; }
+      if (th.dataset.col != null) {
+        var c = +th.dataset.col, c0 = e.shiftKey ? active.c : c;
+        selKeep = true; if (!e.shiftKey) selectCell(0, c, true); selKeep = false;
+        setSel({ r: 0, c: c0 }, { r: lastR, c: c }); dragSel = { col: true, a: c0 }; return;
+      }
+      if (th.dataset.row != null) {
+        var r = +th.dataset.row, r0 = e.shiftKey ? active.r : r;
+        selKeep = true; if (!e.shiftKey) selectCell(r, 0, true); selKeep = false;
+        setSel({ r: r0, c: 0 }, { r: r, c: lastC }); dragSel = { row: true, a: r0 }; return;
+      }
+      return;
+    }
+    var td = e.target.closest("td"); if (!td || e.button !== 0) return;
+    var p = { r: +td.dataset.r, c: +td.dataset.c };
+    if (e.shiftKey) { e.preventDefault(); setSel(active, p); return; }
+    if (e.pointerType === "mouse") dragSel = { a: p, moved: false };
+  });
+  wrapEl.addEventListener("pointerover", function (e) {
+    if (!dragSel || !(e.buttons & 1)) return;
+    var lastR = tds.length - 1, lastC = tds[0].length - 1;
+    if (dragSel.col) { var th = e.target.closest("th[data-col]"), td0 = e.target.closest("td"); var c = th ? +th.dataset.col : td0 ? +td0.dataset.c : null; if (c != null) setSel({ r: 0, c: dragSel.a }, { r: lastR, c: c }); return; }
+    if (dragSel.row) { var rh = e.target.closest("th[data-row]"), td1 = e.target.closest("td"); var r = rh ? +rh.dataset.row : td1 ? +td1.dataset.r : null; if (r != null) setSel({ r: dragSel.a, c: 0 }, { r: r, c: lastC }); return; }
+    var td = e.target.closest("td"); if (!td) return;
+    var p = { r: +td.dataset.r, c: +td.dataset.c };
+    if (p.r === dragSel.a.r && p.c === dragSel.a.c && !dragSel.moved) return;
+    if (!dragSel.moved) { dragSel.moved = true; wrapEl.classList.add("selecting"); var ss = getSelection(); if (ss) ss.removeAllRanges(); }
+    setSel(dragSel.a, p);
+  });
+  window.addEventListener("pointerup", function () { if (dragSel) { dragSel = null; wrapEl.classList.remove("selecting"); } });
+
+  // ťahanie okraja stĺpca alebo riadka = zmena šírky / výšky, dvojklik = podľa obsahu
+  wrapEl.addEventListener("pointerdown", function (e) {
+    var h = e.target.closest(".rz, .rzr"); if (!h) return;
+    e.preventDefault(); e.stopPropagation();
+    var sh = curSheet(), tb = wrapEl.querySelector("table.xl"), isCol = h.classList.contains("rz");
+    var idx = +(isCol ? h.dataset.rz : h.dataset.rzr), start = isCol ? e.clientX : e.clientY;
+    var colEl = isCol ? tb.querySelector("colgroup").children[idx + 1] : null, rowEl = isCol ? null : tb.tBodies[0].rows[idx];
+    var w0 = isCol ? colEl.getBoundingClientRect().width || parseFloat(colEl.style.width) : rowEl.getBoundingClientRect().height;
+    var tw0 = parseFloat(tb.style.width);
+    // pri označených celých stĺpcoch/riadkoch zmeníme všetky naraz
+    var group = [idx];
+    if (isCol && sel.r1 === 0 && sel.r2 >= tds.length - 1 && idx >= sel.c1 && idx <= sel.c2) { group = []; for (var c = sel.c1; c <= sel.c2; c++) group.push(c); }
+    if (!isCol && sel.c1 === 0 && sel.c2 >= tds[0].length - 1 && idx >= sel.r1 && idx <= sel.r2) { group = []; for (var r = sel.r1; r <= sel.r2; r++) group.push(r); }
+    h.classList.add("on"); wrapEl.classList.add("resizing"); if (!isCol) wrapEl.classList.add("rows");
+    var val = w0;
+    function mv(ev) {
+      val = Math.max(isCol ? 24 : 18, Math.round(w0 + ((isCol ? ev.clientX : ev.clientY) - start)));
+      if (isCol) { group.forEach(function (c) { tb.querySelector("colgroup").children[c + 1].style.width = val + "px"; }); tb.style.width = (tw0 + (val - w0) * group.length) + "px"; }
+      else group.forEach(function (r) { tb.tBodies[0].rows[r].style.height = val + "px"; });
+    }
+    function up() {
+      window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up);
+      h.classList.remove("on"); wrapEl.classList.remove("resizing"); wrapEl.classList.remove("rows");
+      if (Math.abs(val - w0) < 1) return;
+      group.forEach(function (i) { if (isCol) sh.colW[i] = val; else sh.rowH[i] = val; });
+      setDirty(true); autosaveSheet();
+    }
+    window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
+  });
+  wrapEl.addEventListener("dblclick", function (e) {
+    var h = e.target.closest(".rz, .rzr"); if (!h) return;
+    var sh = curSheet();
+    if (h.classList.contains("rz")) delete sh.colW[+h.dataset.rz]; else delete sh.rowH[+h.dataset.rzr];
+    var a = active; renderSheet(); selectCell(a.r, a.c, false);
+    setDirty(true); autosaveSheet();
   });
   wrapEl.addEventListener("keydown", function (e) {
     var td = e.target.closest("td"); if (!td) return;
     var r = +td.dataset.r, c = +td.dataset.c;
-    if (e.key === "Enter" && !e.altKey) { e.preventDefault(); selectCell(r + (e.shiftKey ? -1 : 1), c, true); }
-    else if (e.key === "Tab") { e.preventDefault(); selectCell(r, c + (e.shiftKey ? -1 : 1), true); }
+    var ready = !td.dataset.edited;
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && /^[biu]$/i.test(e.key)) { e.preventDefault(); toggleProp(e.key.toLowerCase()); return; }
+    if (e.key === "Enter" && e.altKey) { e.preventDefault(); document.execCommand("insertLineBreak"); td.dataset.edited = "1"; return; }
+    if (e.key === "Enter") { e.preventDefault(); selectCell(r + (e.shiftKey ? -1 : td.rowSpan), c, true); }
+    else if (e.key === "Tab") { e.preventDefault(); selectCell(r, c + (e.shiftKey ? -1 : td.colSpan), true); }
+    else if (ready && /^Arrow/.test(e.key)) {
+      e.preventDefault();
+      var dr = e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0, dc = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+      if (e.shiftKey) {
+        var end = { r: sel.r1 === active.r ? sel.r2 : sel.r1, c: sel.c1 === active.c ? sel.c2 : sel.c1 };
+        end = { r: Math.max(0, Math.min(end.r + dr, tds.length - 1)), c: Math.max(0, Math.min(end.c + dc, tds[0].length - 1)) };
+        setSel(active, end);
+      } else selectCell(r + (dr > 0 ? td.rowSpan : dr), c + (dc > 0 ? td.colSpan : dc), true);
+    }
+    else if (ready && e.key === "Delete") { e.preventDefault(); clearSel(); }
+    else if (e.key === "F2") { e.preventDefault(); td.dataset.edited = "1"; var rg = document.createRange(); rg.selectNodeContents(td); rg.collapse(false); var ss = getSelection(); ss.removeAllRanges(); ss.addRange(rg); }
     else if (e.key === "Escape") { td.textContent = curSheet().cells[r][c] || ""; td.blur(); }
   });
   wrapEl.addEventListener("paste", function (e) {
@@ -22667,13 +23193,55 @@ var __async = (__this, __arguments, generator) => {
   }
   $("addRowBtn").addEventListener("click", function () { addRows(10); setDirty(true); });
   $("addColBtn").addEventListener("click", function () { addCols(1); setDirty(true); });
-  $("boldCellBtn").addEventListener("mousedown", function (e) { e.preventDefault(); });
-  $("boldCellBtn").addEventListener("click", function () {
-    var sh = curSheet(), k = active.r + "," + active.c;
-    if (sh.bold[k]) delete sh.bold[k]; else sh.bold[k] = 1;
-    tds[active.r][active.c].classList.toggle("bold", !!sh.bold[k]);
+  document.querySelectorAll("#toolsSheet button").forEach(function (b) { b.addEventListener("mousedown", function (e) { e.preventDefault(); }); });
+  document.querySelectorAll("#toolsSheet [data-xs]").forEach(function (b) { b.addEventListener("click", function () { toggleProp(b.getAttribute("data-xs")); }); });
+  document.querySelectorAll("#toolsSheet [data-xa]").forEach(function (b) {
+    b.addEventListener("click", function () { var sh = curSheet(), st = sh.style[active.r + "," + active.c] || {}, v = b.getAttribute("data-xa"); setProp("al", st.al === v ? "" : v); });
+  });
+  $("xSize").addEventListener("change", function () { var v = +$("xSize").value; setProp("sz", v === 11 ? "" : v); refocusCell(); });
+  $("xColor").addEventListener("input", function () { $("xColorBar").style.background = $("xColor").value; setProp("color", $("xColor").value); });
+  $("xFill").addEventListener("input", function () { $("xFillBar").style.background = $("xFill").value; setProp("fill", $("xFill").value); });
+  $("xNum").addEventListener("change", function () {
+    var z = $("xNum").value; if (z === "custom") return;
+    forSel(function (r, c, k, sh) { if (z) sh.fmt[k] = z; else delete sh.fmt[k]; });
+    afterFormat(); refocusCell();
+  });
+  function changeDecimals(d) {
+    forSel(function (r, c, k, sh) {
+      var z = sh.fmt[k] || "", raw = sh.cells[r][c];
+      if (!z) {
+        // podľa aktuálneho čísla
+        var n = toNum(raw), dec = isNaN(n) ? 0 : ((String(raw).split(/[.,]/)[1] || "").length);
+        dec = Math.max(0, dec + d); sh.fmt[k] = dec ? "0." + new Array(dec + 1).join("0") : "0"; return;
+      }
+      if (isDateFmt(z)) return;
+      var m = /0(?:\.(0+))?/.exec(z); if (!m) return;
+      var cur = m[1] ? m[1].length : 0, nd = Math.max(0, cur + d);
+      sh.fmt[k] = z.replace(/0(?:\.0+)?/, nd ? "0." + new Array(nd + 1).join("0") : "0");
+    });
+    afterFormat();
+  }
+  $("xDecMore").addEventListener("click", function () { changeDecimals(1); });
+  $("xDecLess").addEventListener("click", function () { changeDecimals(-1); });
+  $("xClear").addEventListener("click", function () {
+    forSel(function (r, c, k, sh) { delete sh.style[k]; delete sh.bold[k]; delete sh.fmt[k]; });
+    afterFormat();
+  });
+  $("xMerge").addEventListener("click", function () {
+    var sh = curSheet(), a = active;
+    var mt = tds[a.r][a.c];
+    if (mt && (mt.rowSpan > 1 || mt.colSpan > 1) && sel.r1 === a.r && sel.c1 === a.c && sel.r2 === a.r + mt.rowSpan - 1 && sel.c2 === a.c + mt.colSpan - 1) {
+      sh.merges = sh.merges.filter(function (m) { return !(m.r === a.r && m.c === a.c); });
+    } else {
+      if (sel.r1 === sel.r2 && sel.c1 === sel.c2) { status("Najprv označ myšou viac buniek, ktoré chceš zlúčiť.", false, 4000); return; }
+      sh.merges = sh.merges.filter(function (m) { return m.r2 < sel.r1 || m.r > sel.r2 || m.c2 < sel.c1 || m.c > sel.c2; });
+      sh.merges.push({ r: sel.r1, c: sel.c1, r2: sel.r2, c2: sel.c2 });
+      var k = sel.r1 + "," + sel.c1, st = stOf(sh, k); if (!st.al && sel.c2 > sel.c1) st.al = "center";
+    }
+    var s0 = sel; renderSheet(); selKeep = true; selectCell(s0.r1, s0.c1, false); selKeep = false; setSel({ r: s0.r1, c: s0.c1 }, { r: s0.r2, c: s0.c2 });
     setDirty(true); autosaveSheet();
   });
+  function refocusCell() { var td = tds[active.r] && tds[active.r][active.c]; if (td) td.focus(); }
 
   function usedRange(sh) {
     var maxR = -1, maxC = -1;
@@ -22685,9 +23253,14 @@ var __async = (__this, __arguments, generator) => {
     return loadLib("lib-xlsx", "XLSX").then(function (X) {
       var wb = X.utils.book_new();
       book.sheets.forEach(function (sh) {
-        var u = usedRange(sh), ws = {};
+        fillSheetDefaults(sh);
+        var u = usedRange(sh), ws = {}, styled = {};
+        // aj prázdne bunky s výplňou alebo orámovaním
+        Object.keys(sh.style).concat(Object.keys(sh.bold)).forEach(function (k) { var a = k.split(","); styled[k] = 1; u.rows = Math.max(u.rows, +a[0] + 1); u.cols = Math.max(u.cols, +a[1] + 1); });
+        sh.merges.forEach(function (m) { u.rows = Math.max(u.rows, m.r2 + 1); u.cols = Math.max(u.cols, m.c2 + 1); });
         for (var r = 0; r < u.rows; r++) for (var c = 0; c < u.cols; c++) {
-          var raw = sh.cells[r][c]; if (raw === "" || raw == null) continue;
+          var raw = sh.cells[r] ? sh.cells[r][c] : "";
+          if (raw === "" || raw == null) { if (styled[r + "," + c]) ws[X.utils.encode_cell({ r: r, c: c })] = { t: "z" }; continue; }
           var addr = X.utils.encode_cell({ r: r, c: c }), cell;
           if (raw.charAt(0) === "=") {
             var f = raw.slice(1).replace(/;/g, ",").replace(/([A-Za-zÁ-žÚú]+)\s*\(/g, function (m, name) {
@@ -22696,17 +23269,76 @@ var __async = (__this, __arguments, generator) => {
             var v; try { v = evalCell(sh, r, c, {}); } catch (e) { v = ""; }
             cell = typeof v === "number" ? { t: "n", v: v, f: f } : { t: "s", v: String(v), f: f };
           } else {
-            var n = toNum(raw);
-            cell = !isNaN(n) && raw.trim() !== "" ? { t: "n", v: n } : { t: "s", v: raw };
+            var n = toNum(raw), dm = /^\s*(\d{1,2})\.\s?(\d{1,2})\.\s?(\d{4})(?:\s+(\d{1,2}):(\d{2}))?\s*$/.exec(raw);
+            if (dm && +dm[2] >= 1 && +dm[2] <= 12 && +dm[1] >= 1 && +dm[1] <= 31) {
+              cell = { t: "n", v: dateToSerial(new Date(Date.UTC(+dm[3], +dm[2] - 1, +dm[1], +(dm[4] || 0), +(dm[5] || 0)))), z: dm[4] ? "d.m.yyyy h:mm" : "d.m.yyyy" };
+            } else cell = !isNaN(n) && raw.trim() !== "" ? { t: "n", v: n } : { t: "s", v: raw };
           }
+          var z = sh.fmt && sh.fmt[r + "," + c];
+          if (z && cell.t === "n" && !cell.z) cell.z = z;
           ws[addr] = cell;
         }
+        if (sh.merges && sh.merges.length) ws["!merges"] = sh.merges.map(function (m) { return { s: { r: m.r, c: m.c }, e: { r: m.r2, c: m.c2 } }; });
+        if (sh.rowH && sh.rowH.length) ws["!rows"] = sh.rowH.map(function (h) { return h ? { hpx: Math.round(h / 1.25) } : null; });
+        if (sh.colW && sh.colW.length) ws["!cols"] = sh.colW.map(function (w) { return w == null ? null : w === 0 ? { hidden: true } : { wch: Math.max(1, (w - 8) / 8 - 0.83) }; });
         ws["!ref"] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(0, u.rows - 1), c: Math.max(0, u.cols - 1) } });
         X.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
       });
-      var out = X.write(wb, { bookType: "xlsx", type: "array" });
+      var out = X.write(wb, { bookType: "xlsx", type: "array", sheetStubs: true });
+      try { out = injectStyles(X, new Uint8Array(out)); } catch (e) { console.warn("styles export", e); }
       return new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     });
+  }
+
+  // knižnica zadarmo nezapisuje písmo, farby ani orámovanie, tak ich dopíšeme do xlsx sami
+  function injectStyles(X, data) {
+    var zip = X.CFB.read(data, { type: "array" });
+    var esc = function (t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); };
+    var argb = function (c) { return "FF" + c.replace("#", "").toUpperCase(); };
+    var BUILTIN = { "0": 1, "0.00": 2, "#,##0": 3, "#,##0.00": 4, "0%": 9, "0.00%": 10 };
+    var numFmts = [], fonts = ['<font><sz val="11"/><name val="Calibri"/><family val="2"/></font>'], fills = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'];
+    var borders = ['<border><left/><right/><top/><bottom/><diagonal/></border>', '<border><left style="thin"><color auto="1"/></left><right style="thin"><color auto="1"/></right><top style="thin"><color auto="1"/></top><bottom style="thin"><color auto="1"/></bottom><diagonal/></border>'];
+    var xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'], xfIdx = { "": 0 }, fontIdx = {}, fillIdx = {}, fmtIdx = {};
+    function xfFor(sh, k, z) {
+      var st = sh.style[k] || {}, b = !!sh.bold[k];
+      var key = JSON.stringify([z || "", b, st.i, st.u, st.sz, st.color, st.fill, st.al, st.va, st.wrap, st.bd]);
+      if (key === JSON.stringify(["", false]) || key === '["",false,null,null,null,null,null,null,null,null,null]') return 0;
+      if (xfIdx[key] != null) return xfIdx[key];
+      var nf = 0;
+      if (z) { if (BUILTIN[z] != null) nf = BUILTIN[z]; else { if (fmtIdx[z] == null) { fmtIdx[z] = 164 + numFmts.length; numFmts.push('<numFmt numFmtId="' + fmtIdx[z] + '" formatCode="' + esc(z) + '"/>'); } nf = fmtIdx[z]; } }
+      var fid = 0;
+      if (b || st.i || st.u || st.sz || st.color) {
+        var fx = "<font>" + (b ? "<b/>" : "") + (st.i ? "<i/>" : "") + (st.u ? "<u/>" : "") + '<sz val="' + (st.sz || 11) + '"/>' + (st.color ? '<color rgb="' + argb(st.color) + '"/>' : "") + '<name val="Calibri"/><family val="2"/></font>';
+        if (fontIdx[fx] == null) { fontIdx[fx] = fonts.length; fonts.push(fx); } fid = fontIdx[fx];
+      }
+      var flid = 0;
+      if (st.fill) { var fl = '<fill><patternFill patternType="solid"><fgColor rgb="' + argb(st.fill) + '"/><bgColor indexed="64"/></patternFill></fill>'; if (fillIdx[fl] == null) { fillIdx[fl] = fills.length; fills.push(fl); } flid = fillIdx[fl]; }
+      var al = st.al || st.va || st.wrap ? "<alignment" + (st.al ? ' horizontal="' + st.al + '"' : "") + (st.va ? ' vertical="' + st.va + '"' : "") + (st.wrap ? ' wrapText="1"' : "") + "/>" : "";
+      var x = '<xf numFmtId="' + nf + '" fontId="' + fid + '" fillId="' + flid + '" borderId="' + (st.bd ? 1 : 0) + '" xfId="0"' + (nf ? ' applyNumberFormat="1"' : "") + (fid ? ' applyFont="1"' : "") + (flid ? ' applyFill="1"' : "") + (st.bd ? ' applyBorder="1"' : "") + (al ? ' applyAlignment="1">' + al + "</xf>" : "/>");
+      xfIdx[key] = xfs.length; xfs.push(x); return xfIdx[key];
+    }
+    book.sheets.forEach(function (sh, i) {
+      var f = X.CFB.find(zip, "/xl/worksheets/sheet" + (i + 1) + ".xml"); if (!f) return;
+      var xml = new TextDecoder().decode(f.content);
+      xml = xml.replace(/<c r="([A-Z]+\d+)"( s="\d+")?/g, function (m, ref) {
+        var a = X.utils.decode_cell(ref), k = a.r + "," + a.c, raw = sh.cells[a.r] ? sh.cells[a.r][a.c] : "";
+        var z = sh.fmt[k] || "";
+        if (!z && raw && /^\s*\d{1,2}\.\s?\d{1,2}\.\s?\d{4}(\s+\d{1,2}:\d{2})?\s*$/.test(raw)) z = /:/.test(raw) ? "d.m.yyyy h:mm" : "d.m.yyyy";
+        var id = xfFor(sh, k, z);
+        return '<c r="' + ref + '"' + (id ? ' s="' + id + '"' : "");
+      });
+      X.CFB.utils.cfb_add(zip, "/xl/worksheets/sheet" + (i + 1) + ".xml", new TextEncoder().encode(xml));
+    });
+    var styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      (numFmts.length ? '<numFmts count="' + numFmts.length + '">' + numFmts.join("") + "</numFmts>" : "") +
+      '<fonts count="' + fonts.length + '">' + fonts.join("") + "</fonts>" +
+      '<fills count="' + fills.length + '">' + fills.join("") + "</fills>" +
+      '<borders count="' + borders.length + '">' + borders.join("") + "</borders>" +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="' + xfs.length + '">' + xfs.join("") + "</cellXfs>" +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles><dxfs count="0"/><tableStyles count="0"/></styleSheet>';
+    X.CFB.utils.cfb_add(zip, "/xl/styles.xml", new TextEncoder().encode(styles));
+    return X.CFB.write(zip, { fileType: "zip", type: "array" });
   }
 
   /* ---------- uloženie ---------- */
@@ -22789,15 +23421,28 @@ var __async = (__this, __arguments, generator) => {
     var sh = curSheet(), u = usedRange(sh);
     if (!u.rows) return Promise.reject(new Error("empty"));
     memo = {};
+    fillSheetDefaults(sh);
     var t = document.createElement("table");
     t.className = "xp" + ($("gridLines").checked ? " lines" : "");
+    var widths = columnWidths(sh, u.cols), sum = widths.reduce(function (a, b) { return a + b; }, 0);
+    memo = {};
+    var avail = $("orient").value === "landscape" ? 1020 : 700;
+    var cg = document.createElement("colgroup");
+    widths.forEach(function (w) { var col = document.createElement("col"); col.style.width = sum > avail ? (w / sum * 100).toFixed(2) + "%" : w + "px"; if (w === 0) col.style.visibility = "collapse"; cg.appendChild(col); });
+    t.appendChild(cg);
+    t.style.width = sum > avail ? "100%" : sum + "px";
+    t.style.tableLayout = "fixed";
+    var cover = mergeCover(sh, u.rows, u.cols);
     for (var r = 0; r < u.rows; r++) {
       var tr = t.insertRow();
       for (var c = 0; c < u.cols; c++) {
+        var cv = cover[r + "," + c];
+        if (cv && cv.master) continue;
         var td = tr.insertCell(), s = shown(sh, r, c);
+        if (cv) { td.rowSpan = cv.rs; td.colSpan = cv.cs; }
         td.textContent = s.text;
         if (s.num) td.className = "num";
-        if (sh.bold[r + "," + c]) td.className += " bold";
+        td.style.cssText = cellCss(sh, r + "," + c, s.num);
       }
     }
     memo = null;
