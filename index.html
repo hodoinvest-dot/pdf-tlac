@@ -332,7 +332,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <span class="ver" title="Verzia apky">v7</span></h1>
+          <h1>PDF Tlač <span class="ver" title="Verzia apky">v8</span></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -461,6 +461,9 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     <!-- Excel nástroje -->
     <div class="tools fmt" id="toolsSheet" hidden>
       <label class="sheetpick" for="sheetSel">Hárok <select id="sheetSel"></select></label>
+      <button type="button" id="addSheetBtn" title="Pridať nový prázdny hárok">+ Hárok</button>
+      <button type="button" id="dupSheetBtn" title="Vytvoriť kópiu celého hárka">Kopírovať hárok</button>
+      <span class="sep"></span>
       <button type="button" data-xs="b" title="Tučné (Ctrl+B)"><b>B</b></button>
       <button type="button" data-xs="i" title="Kurzíva (Ctrl+I)"><i>I</i></button>
       <button type="button" data-xs="u" title="Podčiarknuté (Ctrl+U)"><u>U</u></button>
@@ -22348,6 +22351,38 @@ var __async = (__this, __arguments, generator) => {
     document.execCommand("formatBlock", false, "<" + $("blockSel").value + ">");
     editor.dispatchEvent(new Event("input"));
   });
+  // tabuľka z Excelu má štýly v <style>, ktoré by sa pri vložení stratili, preto ich prepíšeme priamo do buniek
+  editor.addEventListener("paste", function (e) {
+    var html = e.clipboardData && e.clipboardData.getData("text/html");
+    if (!html || !/<table[\s>]/i.test(html)) return;
+    var grid; try { grid = readHtmlTable(html); } catch (er) { return; }
+    if (!grid || !grid.rows.length) return;
+    e.preventDefault();
+    var nc = Math.max.apply(null, grid.rows.map(function (r) { return r ? r.length : 0; }));
+    var cover = {};
+    grid.merges.forEach(function (m) { for (var r = m.r; r <= m.r2; r++) for (var c = m.c; c <= m.c2; c++) if (r !== m.r || c !== m.c) cover[r + "," + c] = 1; });
+    var out = '<table style="border-collapse:collapse;width:auto"><tbody>';
+    grid.rows.forEach(function (row, r) {
+      out += "<tr>";
+      for (var c = 0; c < nc; c++) {
+        if (cover[r + "," + c]) continue;
+        var cell = row && row[c]; if (!cell) { out += "<td><br></td>"; continue; }
+        var m = grid.merges.filter(function (x) { return x.r === r && x.c === c; })[0];
+        var st = cell.st || {}, css = "";
+        if (cell.bold) css += "font-weight:700;";
+        if (st.i) css += "font-style:italic;"; if (st.u) css += "text-decoration:underline;";
+        if (st.sz) css += "font-size:" + st.sz + "pt;"; if (st.color) css += "color:" + st.color + ";";
+        if (st.fill) css += "background-color:" + st.fill + ";"; if (st.al) css += "text-align:" + st.al + ";";
+        var shownText = cell.text;
+        out += "<td" + (m ? ' rowspan="' + (m.r2 - m.r + 1) + '" colspan="' + (m.c2 - m.c + 1) + '"' : "") + (css ? ' style="' + css + '"' : "") + ">" +
+          (escHtml(shownText).replace(/\n/g, "<br>") || "<br>") + "</td>";
+      }
+      out += "</tr>";
+    });
+    out += "</tbody></table><p><br></p>";
+    document.execCommand("insertHTML", false, out);
+    editor.dispatchEvent(new Event("input"));
+  });
   $("tableBtn").addEventListener("mousedown", function (e) { e.preventDefault(); });
   $("tableBtn").addEventListener("click", function () {
     editor.focus();
@@ -22478,7 +22513,9 @@ var __async = (__this, __arguments, generator) => {
               var hasBlock = td.querySelector("p,h1,h2,h3,ul,ol,div");
               if (hasBlock) td.childNodes.forEach(function (c) { block(c, inner, 0); }); else inner.push(para(td));
               if (!inner.length) inner.push(new D.Paragraph(""));
-              cells.push(new D.TableCell({ children: inner, columnSpan: +td.getAttribute("colspan") || undefined }));
+              var shBg = hexColor(td.style && td.style.backgroundColor);
+              cells.push(new D.TableCell({ children: inner, columnSpan: +td.getAttribute("colspan") || undefined, rowSpan: +td.getAttribute("rowspan") || undefined,
+                shading: shBg && shBg !== "FFFFFF" ? { type: D.ShadingType.CLEAR, color: "auto", fill: shBg } : undefined }));
             });
             if (cells.length) rows.push(new D.TableRow({ children: cells }));
           });
@@ -22812,9 +22849,18 @@ var __async = (__this, __arguments, generator) => {
     var sel = $("sheetSel"); sel.innerHTML = "";
     book.sheets.forEach(function (s, i) { var o = document.createElement("option"); o.value = i; o.textContent = s.name; sel.appendChild(o); });
     sel.value = book.active;
-    sel.parentElement.hidden = book.sheets.length < 2;
+    sel.parentElement.hidden = false;
     renderSheet();
   }
+  function switchSheet(i) { book.active = i; active = { r: 0, c: 0 }; var s2 = $("sheetSel"); s2.innerHTML = ""; book.sheets.forEach(function (x, j) { var o = document.createElement("option"); o.value = j; o.textContent = x.name; s2.appendChild(o); }); s2.value = i; renderSheet(); setDirty(true); autosaveSheet(); }
+  function uniqueSheetName(base) { var n = base, i = 2; while (book.sheets.some(function (x) { return x.name === n; })) n = base.slice(0, 26) + " (" + (i++) + ")"; return n; }
+  $("addSheetBtn").addEventListener("click", function () { book.sheets.push(blankSheet(uniqueSheetName("Hárok" + (book.sheets.length + 1)), 30, 8)); switchSheet(book.sheets.length - 1); });
+  $("dupSheetBtn").addEventListener("click", function () {
+    var src = curSheet(), copy = JSON.parse(JSON.stringify({ cells: src.cells, bold: src.bold, fmt: src.fmt, style: src.style, merges: src.merges, colW: src.colW, rowH: src.rowH }));
+    copy.name = uniqueSheetName(src.name); copy.cache = [];
+    book.sheets.splice(book.active + 1, 0, copy); switchSheet(book.active + 1);
+    status("Hárok je skopírovaný ako „" + copy.name + "“.", false, 3000);
+  });
   $("sheetSel").addEventListener("change", function () { book.active = +$("sheetSel").value; active = { r: 0, c: 0 }; renderSheet(); });
 
   function fillSheetDefaults(sh) { sh.fmt = sh.fmt || {}; sh.style = sh.style || {}; sh.merges = sh.merges || []; sh.colW = sh.colW || []; sh.rowH = sh.rowH || []; sh.bold = sh.bold || {}; }
@@ -23036,8 +23082,12 @@ var __async = (__this, __arguments, generator) => {
   wrapEl.addEventListener("focusout", function (e) {
     var td = e.target.closest("td"); if (!td) return;
     var r = +td.dataset.r, c = +td.dataset.c;
-    var raw = td.innerText.replace(/\n+$/, "");
-    setTimeout(function () { commit(r, c, raw); paint(r, c); }, 0);
+    var raw = td.innerText.replace(/\n+$/, ""), shAt = book && curSheet();
+    setTimeout(function () {
+      // medzitým sa mohol prepnúť hárok: zapíšeme do toho, kde sa písalo
+      if (book && curSheet() !== shAt) { if (shAt && shAt.cells[r] && shAt.cells[r][c] !== raw) { shAt.cells[r][c] = raw; setDirty(true); autosaveSheet(); } return; }
+      commit(r, c, raw); paint(r, c);
+    }, 0);
   });
   wrapEl.addEventListener("input", function (e) {
     var td = e.target.closest("td"); if (td) { td.dataset.edited = "1"; $("fx").value = td.innerText; }
@@ -23050,14 +23100,165 @@ var __async = (__this, __arguments, generator) => {
     $("fx").value = ""; refreshAll();
   }
   // kopírovanie viacerých buniek (Ctrl+C) ako tabuľka, vloží sa aj do Excelu
-  wrapEl.addEventListener("copy", function (e) {
-    if (sel.r1 === sel.r2 && sel.c1 === sel.c2) return;
-    var sh = curSheet(), lines = [];
+  function escHtml(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  // kopírovanie buniek: text pre všetky programy + tabuľka s formátovaním pre Word, Excel aj e-mail
+  function copySel(e, cut) {
+    var a = document.activeElement, editing = a && a.tagName === "TD" && a.dataset.edited;
+    var multi = !(sel.r1 === sel.r2 && sel.c1 === sel.c2);
+    if (editing && !multi) return;
+    var sh = curSheet(), lines = [], html = "", widths = columnWidths(sh, sh.cells[0].length);
+    var cover = mergeCover(sh, sh.cells.length, sh.cells[0].length);
     memo = {};
-    try { for (var r = sel.r1; r <= sel.r2; r++) { var row = []; for (var c = sel.c1; c <= sel.c2; c++) row.push(shown(sh, r, c).text); lines.push(row.join("\t")); } }
-    finally { memo = null; }
-    e.clipboardData.setData("text/plain", lines.join("\n")); e.preventDefault();
-  });
+    try {
+      html = '<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt" data-pdftlac="1"><colgroup>';
+      for (var c = sel.c1; c <= sel.c2; c++) html += '<col width="' + widths[c] + '" style="width:' + widths[c] + 'px">';
+      html += "</colgroup>";
+      for (var r = sel.r1; r <= sel.r2; r++) {
+        var row = [], tr = "<tr" + (sh.rowH[r] ? ' style="height:' + sh.rowH[r] + 'px"' : "") + ">";
+        for (c = sel.c1; c <= sel.c2; c++) {
+          var s0 = shown(sh, r, c), k = r + "," + c, cv = cover[k];
+          row.push(/[\t\n"]/.test(s0.text) ? '"' + s0.text.replace(/"/g, '""') + '"' : s0.text);
+          if (cv && cv.master) continue;
+          var raw = sh.cells[r][c] || "";
+          var css = "padding:2px 6px;vertical-align:bottom;" + (s0.num ? "text-align:right;" : "") + cellCss(sh, k, s0.num, true);
+          if (!/border/.test(css)) css += "border:1px solid #d0d0d0;";
+          tr += "<td" + (cv ? ' rowspan="' + Math.min(cv.rs, sel.r2 - r + 1) + '" colspan="' + Math.min(cv.cs, sel.c2 - c + 1) + '"' : "") +
+            ' style="' + escHtml(css) + '"' +
+            (raw !== s0.text ? ' data-raw="' + escHtml(raw) + '"' : "") +
+            (sh.fmt[k] ? ' data-fmt="' + escHtml(sh.fmt[k]) + '"' : "") +
+            ' data-rc="' + r + "," + c + '">' + escHtml(s0.text).replace(/\n/g, "<br>") + "</td>";
+        }
+        lines.push(row.join("\t")); html += tr + "</tr>";
+      }
+      html += "</table>";
+    } finally { memo = null; }
+    e.clipboardData.setData("text/plain", lines.join("\r\n"));
+    e.clipboardData.setData("text/html", "<html><body><!--StartFragment-->" + html + "<!--EndFragment--></body></html>");
+    e.preventDefault();
+    if (cut) clearSel();
+    status(cut ? "Vystrihnuté. Vlož ich cez Ctrl+V." : "Skopírované " + ((sel.r2 - sel.r1 + 1) * (sel.c2 - sel.c1 + 1)) + " buniek. Vlož ich cez Ctrl+V sem, do Wordu, Excelu alebo e-mailu.", false, 3500);
+  }
+  wrapEl.addEventListener("copy", function (e) { copySel(e, false); });
+  wrapEl.addEventListener("cut", function (e) { copySel(e, true); });
+
+  // posun odkazov vo vzorci pri vložení na iné miesto (A1 -> B2), $A$1 zostane
+  function shiftFormula(raw, dr, dc) {
+    if (raw.charAt(0) !== "=" || (!dr && !dc)) return raw;
+    var parts = raw.split(/("[^"]*")/);
+    return parts.map(function (p, i) {
+      if (i % 2) return p;
+      return p.replace(/(\$?)([A-Z]{1,3})(\$?)(\d+)(?![\d(])/gi, function (m, d1, col, d2, row) {
+        var c = colIndex(col.toUpperCase()), r = +row - 1;
+        if (!d1) c += dc; if (!d2) r += dr;
+        if (c < 0 || r < 0) return "#REF!";
+        return d1 + colName(c) + d2 + (r + 1);
+      });
+    }).join("");
+  }
+  // štýly tabuľky z HTML (aj z Excelu, ktorý ich píše do <style>) prečítame cez skrytý tieňový strom
+  function readHtmlTable(html) {
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    var table = doc.querySelector("table"); if (!table) return null;
+    var host = document.createElement("div");
+    host.style.cssText = "position:fixed;left:-99999px;top:0;width:4000px;visibility:hidden";
+    document.body.appendChild(host);
+    var root = host.attachShadow ? host.attachShadow({ mode: "open" }) : host;
+    var styles = Array.prototype.map.call(doc.querySelectorAll("style"), function (st) { return st.textContent.replace(/<!--|-->/g, ""); }).join("\n");
+    root.innerHTML = "<style>:host{all:initial} table{font-family:Calibri,sans-serif;font-size:11pt;color:#000} " + styles + "</style>";
+    var t = document.importNode(table, true); root.appendChild(t);
+    var out = { rows: [], merges: [], colW: [] };
+    var occ = {};
+    Array.prototype.forEach.call(t.rows, function (tr, ri) {
+      var ci = 0;
+      out.rows[ri] = out.rows[ri] || [];
+      Array.prototype.forEach.call(tr.cells, function (td) {
+        while (occ[ri + "," + ci]) ci++;
+        var rs = td.rowSpan || 1, cs = td.colSpan || 1;
+        for (var a = 0; a < rs; a++) for (var b = 0; b < cs; b++) occ[(ri + a) + "," + (ci + b)] = 1;
+        if (rs > 1 || cs > 1) out.merges.push({ r: ri, c: ci, r2: ri + rs - 1, c2: ci + cs - 1 });
+        var cl = td.cloneNode(true);
+        cl.querySelectorAll("br").forEach(function (x) { x.replaceWith("\n"); });
+        cl.querySelectorAll("p,div").forEach(function (x, i) { if (i) x.before("\n"); });
+        var text = cl.textContent.replace(/ /g, " ").replace(/[ \t]*\n[ \t]*/g, "\n").replace(/^\s+|\s+$/g, "");
+        var cssd = getComputedStyle(td), st = {}, bold = false;
+        var fw = cssd.fontWeight; if (fw === "bold" || +fw >= 600) bold = true;
+        if (cssd.fontStyle === "italic") st.i = 1;
+        if ((cssd.textDecorationLine || "").indexOf("underline") >= 0) st.u = 1;
+        var pt = Math.round(parseFloat(cssd.fontSize) * 0.75 * 2) / 2; if (pt && Math.abs(pt - 11) > 0.6) st.sz = pt;
+        var col = cssHex(cssd.color); if (col && col !== "#000000") st.color = col;
+        var bg = cssHex(cssd.backgroundColor); if (bg && bg !== "#FFFFFF") st.fill = bg;
+        var al = cssd.textAlign; if (al === "center" || al === "right" || al === "justify") st.al = al;
+        if (["Top", "Bottom", "Left", "Right"].filter(function (sd) { return cssd["border" + sd + "Style"] !== "none" && parseFloat(cssd["border" + sd + "Width"]) > 0 && cssHex(cssd["border" + sd + "Color"]) !== "#D0D0D0"; }).length >= 2) st.bd = 1;
+        if (cssd.whiteSpace === "pre-wrap" || cssd.whiteSpace === "normal" && /\n/.test(text)) { if (/\n/.test(text)) st.wrap = 1; }
+        var raw = td.getAttribute("data-raw"), fmt = td.getAttribute("data-fmt"), xnum = td.getAttribute("x:num");
+        if (raw == null && xnum != null && xnum !== "") {
+          raw = xnum;
+          if (/€\s*$/.test(text)) { var dd = (/[.,](\d+)\s*€/.exec(text) || [, ""])[1].length; fmt = "#,##0" + (dd ? "." + new Array(dd + 1).join("0") : "") + ' "€"'; }
+          else if (/%\s*$/.test(text)) { raw = xnum; var pd = (/[.,](\d+)\s*%/.exec(text) || [, ""])[1].length; fmt = pd ? "0." + new Array(pd + 1).join("0") + "%" : "0%"; }
+          else if (/\d\s\d{3}/.test(text) || /[.,]\d+$/.test(text)) { var d2 = (/[.,](\d+)$/.exec(text) || [, ""])[1].length; fmt = "#,##0" + (d2 ? "." + new Array(d2 + 1).join("0") : ""); }
+        }
+        out.rows[ri][ci] = { text: text, raw: raw != null ? raw : text, bold: bold, st: st, fmt: fmt || "", rc: td.getAttribute("data-rc") };
+        ci += cs;
+      });
+    });
+    var cols = t.querySelectorAll("col");
+    var ci2 = 0;
+    Array.prototype.forEach.call(cols, function (cl) {
+      var span = +cl.getAttribute("span") || 1, w = parseFloat(cl.getAttribute("width")) || cl.getBoundingClientRect().width;
+      for (var i = 0; i < span; i++) out.colW[ci2++] = w ? Math.round(w * (cl.closest("table").getAttribute("data-pdftlac") ? 1 : 1.25)) : null;
+    });
+    host.remove();
+    return out;
+  }
+  function cssHex(v) {
+    var m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(v || "");
+    if (!m || (m[4] != null && +m[4] === 0)) return "";
+    return "#" + [m[1], m[2], m[3]].map(function (x) { return ("0" + (+x).toString(16)).slice(-2); }).join("").toUpperCase();
+  }
+  function pasteGrid(grid, r0, c0) {
+    var sh = curSheet(), nr = grid.rows.length, nc = Math.max.apply(null, [1].concat(grid.rows.map(function (r) { return r ? r.length : 0; })));
+    var needRows = r0 + nr + 2 - sh.cells.length; if (needRows > 0) addRows(needRows, true);
+    while (c0 + nc > sh.cells[0].length) addCols(1, true);
+    // staré zlúčenia v cieľovej oblasti zrušíme
+    sh.merges = sh.merges.filter(function (m) { return m.r2 < r0 || m.r > r0 + nr - 1 || m.c2 < c0 || m.c > c0 + nc - 1; });
+    grid.rows.forEach(function (row, i) {
+      for (var j = 0; j < nc; j++) {
+        var cell = row && row[j], r = r0 + i, c = c0 + j, k = r + "," + c;
+        if (!cell) { if (grid.html) { sh.cells[r][c] = ""; delete sh.style[k]; delete sh.bold[k]; delete sh.fmt[k]; } continue; }
+        var raw = cell.raw;
+        if (cell.rc && raw.charAt(0) === "=") { var o = cell.rc.split(","); raw = shiftFormula(raw, r - +o[0], c - +o[1]); }
+        sh.cells[r][c] = raw;
+        if (sh.cache[r]) sh.cache[r][c] = undefined;
+        if (grid.html) {
+          if (cell.bold) sh.bold[k] = 1; else delete sh.bold[k];
+          if (cell.st && Object.keys(cell.st).length) sh.style[k] = cell.st; else delete sh.style[k];
+          if (cell.fmt) sh.fmt[k] = cell.fmt; else delete sh.fmt[k];
+        }
+      }
+    });
+    grid.merges.forEach(function (m) { sh.merges.push({ r: r0 + m.r, c: c0 + m.c, r2: r0 + m.r2, c2: c0 + m.c2 }); });
+    (grid.colW || []).forEach(function (w, j) { if (w && sh.colW[c0 + j] == null && !usedCol(sh, c0 + j, r0, nr)) sh.colW[c0 + j] = Math.max(40, Math.min(600, w)); });
+    setDirty(true); autosaveSheet(); renderSheet();
+    selKeep = true; selectCell(r0, c0, true); selKeep = false;
+    setSel({ r: r0, c: c0 }, { r: r0 + nr - 1, c: c0 + nc - 1 });
+  }
+  // stĺpec už má obsah mimo vkladanej oblasti -> šírku nemeníme
+  function usedCol(sh, c, r0, nr) { for (var r = 0; r < sh.cells.length; r++) { if ((r < r0 || r >= r0 + nr) && sh.cells[r][c]) return true; } return false; }
+  function parseTsv(text) {
+    var rows = [], row = [], cur = "", q = false;
+    text = text.replace(/\r\n?/g, "\n").replace(/\n$/, "");
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (q) { if (ch === '"') { if (text.charAt(i + 1) === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"' && cur === "") q = true;
+      else if (ch === "\t") { row.push(cur); cur = ""; }
+      else if (ch === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+      else cur += ch;
+    }
+    row.push(cur); rows.push(row);
+    return { rows: rows.map(function (r) { return r.map(function (v) { return { raw: v }; }); }), merges: [], colW: [], html: false };
+  }
+
   // ťahanie myšou = výber oblasti, Shift+klik = rozšírenie
   var dragSel = null;
   wrapEl.addEventListener("pointerdown", function (e) {
@@ -23156,19 +23357,23 @@ var __async = (__this, __arguments, generator) => {
   });
   wrapEl.addEventListener("paste", function (e) {
     var td = e.target.closest("td"); if (!td) return;
-    var text = (e.clipboardData || window.clipboardData).getData("text/plain");
-    if (text.indexOf("\t") < 0 && text.indexOf("\n") < 0) { e.preventDefault(); document.execCommand("insertText", false, text); return; }
+    var cd = e.clipboardData || window.clipboardData;
+    var text = cd.getData("text/plain") || "", html = cd.getData("text/html") || "";
+    var multi = /<table[\s>]/i.test(html) || text.indexOf("\t") >= 0 || /\n./.test(text.replace(/\r/g, ""));
+    if (!multi) {
+      if (html && /data-pdftlac/.test(html)) {
+        // jedna bunka z tejto apky: vložíme aj formát
+      } else { e.preventDefault(); document.execCommand("insertText", false, text); return; }
+    }
     e.preventDefault();
-    var r0 = +td.dataset.r, c0 = +td.dataset.c, sh = curSheet();
-    var lines = text.replace(/\r/g, "").replace(/\n$/, "").split("\n");
-    var needRows = r0 + lines.length + 2 - sh.cells.length; if (needRows > 0) addRows(needRows, true);
-    lines.forEach(function (line, i) {
-      line.split("\t").forEach(function (val, j) {
-        if (c0 + j >= sh.cells[0].length) addCols(1, true);
-        sh.cells[r0 + i][c0 + j] = val;
-      });
-    });
-    setDirty(true); autosaveSheet(); renderSheet(); selectCell(r0, c0, true);
+    var r0 = +td.dataset.r, c0 = +td.dataset.c, grid = null;
+    // keď je označená oblasť, vkladáme do jej ľavého horného rohu
+    if (!(sel.r1 === sel.r2 && sel.c1 === sel.c2)) { r0 = sel.r1; c0 = sel.c1; }
+    if (/<table[\s>]/i.test(html)) { try { grid = readHtmlTable(html); if (grid) grid.html = true; } catch (er) { console.warn(er); grid = null; } }
+    if (!grid || !grid.rows.length) grid = parseTsv(text);
+    td.blur();
+    pasteGrid(grid, r0, c0);
+    status("Vložené: " + grid.rows.length + " riadkov.", false, 2500);
   });
   $("fx").addEventListener("input", function () {
     var td = tds[active.r][active.c];
