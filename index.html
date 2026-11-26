@@ -61,6 +61,7 @@ header.bar { position: sticky; top: 0; z-index: 5; background: var(--surface); b
 .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; min-width: 0; }
 .brand svg { flex: none; cursor: pointer; }
 .brand h1 { font: 700 20px/1 var(--font-display); margin: 0; letter-spacing: -.01em; }
+.brand h1 .ver { font: 500 11px/1 var(--font-body); color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 5px; vertical-align: middle; letter-spacing: 0; }
 .file-name { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40ch; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; position: relative; }
 button {
@@ -315,7 +316,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač</h1>
+          <h1>PDF Tlač <span class="ver" title="Verzia apky">v5</span></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
