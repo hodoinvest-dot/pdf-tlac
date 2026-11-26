@@ -1,4 +1,4 @@
-const CACHE = 'pdf-tlac-v5';
+const CACHE = 'pdf-tlac-v6';
 const SHARED = 'pdf-tlac-shared';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-192.png', './icon-maskable-512.png'];
 
@@ -42,7 +42,9 @@ self.addEventListener('fetch', (e) => {
   if (req.mode === 'navigate') {
     // najprv internet (kvôli aktualizáciám), bez internetu uložená verzia
     e.respondWith(
-      fetch(req).then((res) => {
+      // no-cache: obísť 10-minútovú cache prehliadača, aby nová verzia prišla hneď
+      fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then((res) => {
+        if (!res.ok) throw new Error('http ' + res.status);
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put('./index.html', copy));
         return res;
