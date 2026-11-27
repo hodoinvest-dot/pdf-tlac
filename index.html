@@ -256,6 +256,8 @@ table.xl td:focus { box-shadow: inset 0 0 0 2px var(--accent); white-space: pre-
 .inline-opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
 .inline-opt input { margin-top: 4px; accent-color: var(--accent); }
 .inline-opt small { color: var(--muted); }
+.modal ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 6px; line-height: 1.45; }
+@media (max-width: 640px) { #pdfOutBtn .lbl { display: none; } }
 .shrink-res { font-weight: 600; color: var(--fg) !important; }
 .modal-back { position: fixed; inset: 0; background: rgba(10,14,22,.55); display: grid; place-items: center; z-index: 30; padding: 16px; }
 .modal { background: var(--surface); border-radius: 16px; padding: 24px; width: min(440px, 100%); display: grid; gap: 14px; }
@@ -391,7 +393,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v14 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v15 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -411,6 +413,10 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
         <button id="saveBtn" type="button" hidden>
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Uložiť
+        </button>
+        <button id="pdfOutBtn" type="button" hidden title="Uložiť ako PDF">
+          <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15H6z M14 2v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 16h6m-3-3v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="lbl">Ako PDF</span>
         </button>
         <button id="printBtn" class="primary" type="button" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
@@ -680,7 +686,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v14 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v15 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -753,6 +759,19 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
       <button type="button" class="primary" id="shrinkGo">Zmenšiť</button>
       <button type="button" class="primary" id="shrinkSave" hidden>Uložiť zmenšené PDF</button>
     </div>
+  </div>
+</div>
+<div class="modal-back" id="pdfOutBack" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pdfOutTitle">
+    <h3 id="pdfOutTitle">Uložiť ako PDF</h3>
+    <p>Otvorí sa okno tlače. Tam urob toto:</p>
+    <ol class="steps">
+      <li>Pri <b>Tlačiareň</b> (alebo <b>Cieľ</b>) vyber <b>Uložiť ako PDF</b>.</li>
+      <li>Klikni na <b>Uložiť</b> (na mobile na modré tlačidlo PDF).</li>
+      <li>Vyber, kam sa má súbor uložiť.</li>
+    </ol>
+    <label class="inline"><input type="checkbox" id="pdfOutNoMore"> Nabudúce už neukazovať</label>
+    <div class="row"><button type="button" id="pdfOutCancel">Zrušiť</button><button type="button" class="primary" id="pdfOutGo">Pokračovať</button></div>
   </div>
 </div>
 <div class="modal-back" id="noteBack" hidden>
@@ -21214,6 +21233,7 @@ var __async = (__this, __arguments, generator) => {
     $("toolsDoc").hidden = m !== "doc";
     $("toolsSheet").hidden = m !== "sheet";
     $("saveBtn").hidden = !(m === "doc" || m === "sheet" || m === "pdf");
+    $("pdfOutBtn").hidden = !(m === "doc" || m === "sheet");
     $("toolsEdit").hidden = true; $("hintRow").hidden = true;
     if (m === "pdf") { $("toolsPdf").hidden = pdfView !== "pages"; $("toolsEdit").hidden = pdfView !== "edit"; $("hintRow").hidden = pdfView !== "edit"; $("viewPdf").hidden = pdfView !== "pages"; }
     $("editPane").hidden = !(m === "pdf" && pdfView === "edit");
@@ -22442,6 +22462,26 @@ var __async = (__this, __arguments, generator) => {
     if (!pdfModified && docs.length === 1 && !onlySel) return Promise.resolve(docs[0].bytes);
     return buildPdf(onlySel);
   }
+
+  /* ---------- Word / Excel ako PDF (cez okno tlače, text zostane textom) ---------- */
+  var pdfOutTitle = null;
+  function pdfOutRun() {
+    $("pdfOutBack").hidden = true;
+    var nm = mode === "doc" ? docName : (book && book.name) || "tabulka";
+    pdfOutTitle = document.title;
+    document.title = baseName(nm || "dokument");   // prehliadač z názvu stránky navrhne meno PDF súboru
+    window.ptTrack && window.ptTrack("ulozit-ako-pdf-" + (mode === "doc" ? "word" : "excel"));
+    $("printBtn").click();
+  }
+  $("pdfOutBtn").addEventListener("click", function () {
+    if (mode !== "doc" && mode !== "sheet") return;
+    if (load("pt-pdfout-nohint")) { pdfOutRun(); return; }
+    $("pdfOutNoMore").checked = false; $("pdfOutBack").hidden = false;
+    setTimeout(function () { $("pdfOutGo").focus(); }, 30);
+  });
+  $("pdfOutGo").addEventListener("click", function () { if ($("pdfOutNoMore").checked) store("pt-pdfout-nohint", "1"); pdfOutRun(); });
+  $("pdfOutCancel").addEventListener("click", function () { $("pdfOutBack").hidden = true; });
+  window.addEventListener("afterprint", function () { if (pdfOutTitle !== null) { document.title = pdfOutTitle; pdfOutTitle = null; } });
 
   /* ---------- Zmenšiť PDF ---------- */
   function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " kB"; }
@@ -24509,7 +24549,7 @@ var __async = (__this, __arguments, generator) => {
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v14", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v15", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
