@@ -259,6 +259,12 @@ table.xl td:focus { box-shadow: inset 0 0 0 2px var(--accent); white-space: pre-
 .inline-opt small { color: var(--muted); }
 .modal ol.steps { margin: 0; padding-left: 22px; display: grid; gap: 6px; line-height: 1.45; }
 @media (max-width: 640px) { #pdfOutBtn .lbl { display: none; } }
+.small-btn { min-height: 34px; padding: 4px 12px; font-size: 14px; }
+.form-list { display: grid; gap: 10px; max-height: 55vh; overflow: auto; padding-right: 4px; }
+.form-list .field textarea { min-height: 70px; }
+.form-list .field select { font: 500 15px var(--font-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 40px; }
+.form-list label.chk { display: flex; gap: 8px; align-items: center; font-size: 15px; color: var(--fg); }
+.form-list label.chk input { width: 20px; height: 20px; accent-color: var(--accent); }
 .shrink-res { font-weight: 600; color: var(--fg) !important; }
 .modal-back { position: fixed; inset: 0; background: rgba(10,14,22,.55); display: grid; place-items: center; z-index: 30; padding: 16px; }
 .modal { background: var(--surface); border-radius: 16px; padding: 24px; width: min(440px, 100%); display: grid; gap: 14px; }
@@ -394,7 +400,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v17 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v18 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -444,6 +450,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <option value="300" selected>Vysoká</option>
         </select>
       </label>
+      <button class="primary small-btn" id="formBtn" type="button" hidden>Vyplniť formulár</button>
       <button class="linkish" id="shrinkBtn" type="button">Zmenšiť PDF</button>
       <button class="linkish" id="splitBtn" type="button">Rozdeliť PDF</button>
       <button class="linkish" id="nativeBtn" type="button">Otvoriť v prehliadači</button>
@@ -693,7 +700,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v17 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v18 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -791,6 +798,15 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     <label class="inline-opt"><input type="radio" name="splitMode" value="sel"> <span><b>Iba označené strany</b><br><small>Strany s modrou fajkou dám do jedného nového PDF.</small></span></label>
     <p class="small" id="splitNote">Viac súborov ti uložím naraz v jednom balíku .zip.</p>
     <div class="row"><button type="button" id="splitCancel">Zrušiť</button><button type="button" class="primary" id="splitGo">Rozdeliť a uložiť</button></div>
+  </div>
+</div>
+<div class="modal-back" id="formBack" hidden>
+  <div class="modal long" role="dialog" aria-modal="true" aria-labelledby="formTitle">
+    <h3 id="formTitle">Vyplniť formulár</h3>
+    <p>Vyplň políčka a klikni na Hotovo. Potom PDF ulož alebo vytlač.</p>
+    <div class="form-list" id="formList"></div>
+    <label class="inline"><input type="checkbox" id="formFlat"> Zamknúť vyplnené údaje (už sa nebudú dať prepísať)</label>
+    <div class="row"><button type="button" id="formCancel">Zrušiť</button><button type="button" class="primary" id="formOk">Hotovo</button></div>
   </div>
 </div>
 <div class="modal-back" id="noteBack" hidden>
@@ -21254,6 +21270,8 @@ var __async = (__this, __arguments, generator) => {
     $("toolsSheet").hidden = m !== "sheet";
     $("saveBtn").hidden = !(m === "doc" || m === "sheet" || m === "pdf");
     $("pdfOutBtn").hidden = !(m === "doc" || m === "sheet");
+    $("formBtn").hidden = true;
+    if (m === "pdf") checkForms();
     $("toolsEdit").hidden = true; $("hintRow").hidden = true;
     if (m === "pdf") { $("toolsPdf").hidden = pdfView !== "pages"; $("toolsEdit").hidden = pdfView !== "edit"; $("hintRow").hidden = pdfView !== "edit"; $("viewPdf").hidden = pdfView !== "pages"; }
     $("editPane").hidden = !(m === "pdf" && pdfView === "edit");
@@ -22643,6 +22661,109 @@ var __async = (__this, __arguments, generator) => {
       window.ptTrack && window.ptTrack("rozdelit-pdf");
     }).catch(function (e) { console.error(e); status(pdfError(e), true, 6000); })
       .then(function () { $("splitGo").disabled = false; $("splitGo").textContent = "Rozdeliť a uložiť"; });
+  });
+
+  /* ---------- Vyplniť PDF formulár ---------- */
+  var formToken = 0;
+  function checkForms() {
+    var tk = ++formToken;
+    Promise.all(docs.map(function (d) { return d.pdf.getFieldObjects ? d.pdf.getFieldObjects().catch(function () { return null; }) : null; })).then(function (r) {
+      if (tk !== formToken || mode !== "pdf") return;
+      var n = 0;
+      r.forEach(function (o) { if (o) Object.keys(o).forEach(function (k) { if (o[k].some(function (w) { return w.type && w.type !== "button" && w.type !== "signature"; })) n++; }); });
+      $("formBtn").hidden = !n;
+      $("formBtn").textContent = "Vyplniť formulár (" + n + (n === 1 ? " políčko" : n < 5 ? " políčka" : " políčok") + ")";
+      if (n && !checkForms.told) { checkForms.told = 1; status("Toto PDF je formulár. Klikni na „Vyplniť formulár“.", false, 6000); }
+    });
+  }
+  function nice(name) { var t = String(name).split(".").pop().replace(/[_]+/g, " ").replace(/([a-zà-ž])([A-Z])/g, "$1 $2").trim(); return t.charAt(0).toUpperCase() + t.slice(1); }
+  var formState = null;
+  $("formBtn").addEventListener("click", function () {
+    commitTextEditor();
+    var list = $("formList"); list.innerHTML = ""; $("formFlat").checked = false;
+    loadLib("lib-pdflib", "PDFLib").then(function (P) {
+      formState = { P: P, docs: [] };
+      var chain = Promise.resolve();
+      docs.forEach(function (d, di) {
+        chain = chain.then(function () {
+          if (d.locked) return;
+          return P.PDFDocument.load(d.bytes, { updateMetadata: false }).then(function (pd) {
+            var form = pd.getForm(), fields = form.getFields();
+            if (!fields.length) return;
+            formState.docs.push({ di: di, pd: pd, form: form, fields: fields });
+            if (docs.length > 1) { var h = document.createElement("h4"); h.textContent = d.name; list.appendChild(h); }
+            fields.forEach(function (f, fi) {
+              var C = f.constructor.name, id = "ff" + di + "_" + fi, nm = nice(f.getName()), w;
+              var lab = document.createElement("label"); lab.className = "field";
+              if (f instanceof P.PDFTextField) {
+                var multi = f.isMultiline();
+                w = document.createElement(multi ? "textarea" : "input");
+                if (!multi) w.type = "text";
+                w.value = f.getText() || ""; if (f.getMaxLength && f.getMaxLength()) w.maxLength = f.getMaxLength();
+                if (f.isReadOnly()) w.disabled = true;
+                lab.append(nm, w);
+              } else if (f instanceof P.PDFCheckBox) {
+                lab.className = "chk"; w = document.createElement("input"); w.type = "checkbox"; w.checked = f.isChecked();
+                lab.append(w, nm);
+              } else if (f instanceof P.PDFDropdown || f instanceof P.PDFOptionList || f instanceof P.PDFRadioGroup) {
+                w = document.createElement("select");
+                var opts = f.getOptions(), cur = f instanceof P.PDFRadioGroup ? f.getSelected() : (f.getSelected() || [])[0];
+                var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "— vyber —"; w.appendChild(o0);
+                opts.forEach(function (o) { var op = document.createElement("option"); op.value = o; op.textContent = o; if (o === cur) op.selected = true; w.appendChild(op); });
+                lab.append(nm, w);
+              } else return;
+              w.id = id; w.dataset.fi = fi; w.dataset.di = di;
+              list.appendChild(lab);
+            });
+          });
+        });
+      });
+      return chain;
+    }).then(function () {
+      if (!list.children.length) { status("Vo formulári som nenašla políčka, ktoré sa dajú vyplniť.", true, 5000); return; }
+      $("formBack").hidden = false;
+      var first = list.querySelector("input,textarea,select"); if (first) setTimeout(function () { first.focus(); }, 30);
+    }).catch(function (e) { console.error(e); status(pdfError(e), true, 6000); });
+  });
+  $("formCancel").addEventListener("click", function () { $("formBack").hidden = true; });
+  $("formOk").addEventListener("click", function () {
+    if (!formState) return;
+    var P = formState.P, flat = $("formFlat").checked;
+    $("formOk").disabled = true;
+    var chain = loadLib("lib-fontkit", "fontkit");
+    formState.docs.forEach(function (fd) {
+      chain = chain.then(function () {
+        fd.pd.registerFontkit(window.fontkit);
+        return fd.pd.embedFont(b64ToBytes("font-regular"), { subset: true }).then(function (font) {
+          fd.fields.forEach(function (f, fi) {
+            var w = document.querySelector('#formList [data-di="' + fd.di + '"][data-fi="' + fi + '"]');
+            if (!w || w.disabled) return;
+            try {
+              if (f instanceof P.PDFTextField) f.setText(w.value || undefined);
+              else if (f instanceof P.PDFCheckBox) { if (w.checked) f.check(); else f.uncheck(); }
+              else if (f instanceof P.PDFRadioGroup) { if (w.value) f.select(w.value); else f.clear(); }
+              else if (f instanceof P.PDFDropdown || f instanceof P.PDFOptionList) { if (w.value) f.select(w.value); else f.clear(); }
+            } catch (e) { console.warn(f.getName(), e); }
+          });
+          fd.form.updateFieldAppearances(font);
+          if (flat) fd.form.flatten();
+          return fd.pd.save();
+        }).then(function (bytes) {
+          return getPdfLib().then(function (lib) { return lib.getDocument({ data: bytes.slice() }).promise; }).then(function (pdf) {
+            try { docs[fd.di].pdf.destroy(); } catch (e) {}
+            docs[fd.di].pdf = pdf; docs[fd.di].bytes = bytes;
+          });
+        });
+      });
+    });
+    chain.then(function () {
+      thumbCache = {}; textCache = {};
+      $("formBack").hidden = true;
+      setDirty(true); refreshPdfViews(); checkForms();
+      window.ptTrack && window.ptTrack("formular");
+      status("Formulár je vyplnený. Teraz ho Ulož alebo Vytlač.", false, 6000);
+    }).catch(function (e) { console.error(e); status("Formulár sa nepodarilo vyplniť. " + pdfError(e), true, 7000); })
+      .then(function () { $("formOk").disabled = false; });
   });
 
   /* ---------- Zmenšiť PDF ---------- */
@@ -24712,7 +24833,7 @@ var __async = (__this, __arguments, generator) => {
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v17", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v18", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
