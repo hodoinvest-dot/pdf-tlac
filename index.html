@@ -22,7 +22,7 @@
    feedbackUrl : adresa formulára (napr. https://formspree.io/f/xxxx). Prázdne = hodnotenie sa pošle e-mailom cez contactEmail.
    contactEmail: kontaktný e-mail, ktorý uvidia používatelia.
    operator    : meno prevádzkovateľa do stránky Súkromie.            */
-window.PT_CONFIG = { goatcounter: "", feedbackUrl: "", contactEmail: "", operator: "" };
+window.PT_CONFIG = { goatcounter: "pdftlac", feedbackUrl: "https://formsubmit.co/ajax/hodoinvest@gmail.com", contactEmail: "hodoinvest@gmail.com", operator: "" };
 (function () {
   var C = window.PT_CONFIG;
   function off() {
@@ -386,7 +386,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v10 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v11 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -674,7 +674,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v10 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v11 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -24413,7 +24413,8 @@ var __async = (__this, __arguments, generator) => {
     if (!rateVal) return;
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
-      verzia: "v10", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
+      verzia: "v11", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
