@@ -252,6 +252,11 @@ table.xl td:focus { box-shadow: inset 0 0 0 2px var(--accent); white-space: pre-
 .modal.long ul { margin: 0; padding-left: 20px; }
 .rate-ask { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 19; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; box-shadow: 0 8px 24px rgba(0,0,0,.2); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; max-width: calc(100% - 32px); }
 .rate-ask span { font-weight: 600; }
+.inline-opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.inline-opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.inline-opt input { margin-top: 4px; accent-color: var(--accent); }
+.inline-opt small { color: var(--muted); }
+.shrink-res { font-weight: 600; color: var(--fg) !important; }
 .modal-back { position: fixed; inset: 0; background: rgba(10,14,22,.55); display: grid; place-items: center; z-index: 30; padding: 16px; }
 .modal { background: var(--surface); border-radius: 16px; padding: 24px; width: min(440px, 100%); display: grid; gap: 14px; }
 .modal h3 { margin: 0; font: 700 20px var(--font-display); }
@@ -386,7 +391,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v13 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v14 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -432,6 +437,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <option value="300" selected>Vysoká</option>
         </select>
       </label>
+      <button class="linkish" id="shrinkBtn" type="button">Zmenšiť PDF</button>
       <button class="linkish" id="nativeBtn" type="button">Otvoriť v prehliadači</button>
       <button class="linkish" id="shareBtn" type="button" hidden>Poslať do inej apky</button>
       <span class="count" id="count"></span>
@@ -674,7 +680,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v13 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v14 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -733,6 +739,21 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
   <span>Páči sa ti PDF Tlač?</span>
   <button type="button" class="primary" data-open="rate">Ohodnotiť</button>
   <button type="button" id="rateLater">Neskôr</button>
+</div>
+<div class="modal-back" id="shrinkBack" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="shrinkTitle">
+    <h3 id="shrinkTitle">Zmenšiť PDF</h3>
+    <p id="shrinkInfo">Menší súbor sa ľahšie pošle e-mailom.</p>
+    <label class="inline-opt"><input type="radio" name="shrinkLvl" value="small" checked> <span><b>Čo najmenší</b><br><small>Na e-mail a web. Text sa zmení na obrázok.</small></span></label>
+    <label class="inline-opt"><input type="radio" name="shrinkLvl" value="mid"> <span><b>Stredný</b><br><small>Dobrá kvalita na tlač. Text sa zmení na obrázok.</small></span></label>
+    <label class="inline-opt"><input type="radio" name="shrinkLvl" value="lossless"> <span><b>Bez straty kvality</b><br><small>Text zostane textom, zmenšenie je menšie.</small></span></label>
+    <p id="shrinkResult" class="shrink-res" hidden></p>
+    <div class="row">
+      <button type="button" id="shrinkCancel">Zavrieť</button>
+      <button type="button" class="primary" id="shrinkGo">Zmenšiť</button>
+      <button type="button" class="primary" id="shrinkSave" hidden>Uložiť zmenšené PDF</button>
+    </div>
+  </div>
 </div>
 <div class="modal-back" id="noteBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="noteTitle">
@@ -22422,6 +22443,80 @@ var __async = (__this, __arguments, generator) => {
     return buildPdf(onlySel);
   }
 
+  /* ---------- Zmenšiť PDF ---------- */
+  function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " kB"; }
+  var shrinkOut = null, shrinkSrc = 0;
+  function shrinkPdf(bytes, lvl) {
+    return loadLib("lib-pdflib", "PDFLib").then(function (P) {
+      if (lvl === "lossless") {
+        return P.PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: true }).then(function (d) { return d.save({ useObjectStreams: true }); });
+      }
+      var dpi = lvl === "small" ? 96 : 150, q = lvl === "small" ? 0.6 : 0.78;
+      return Promise.all([getPdfLib(), P.PDFDocument.create()]).then(function (r) {
+        var out = r[1];
+        return r[0].getDocument({ data: bytes.slice() }).promise.then(function (src) {
+          var chain = Promise.resolve();
+          for (var n = 1; n <= src.numPages; n++) (function (n) {
+            chain = chain.then(function () {
+              status("Zmenšujem stranu " + n + " / " + src.numPages + "…");
+              return src.getPage(n).then(function (pg) {
+                var vp1 = pg.getViewport({ scale: 1 }), vp = pg.getViewport({ scale: dpi / 72 });
+                var c = document.createElement("canvas"), ctx = c.getContext("2d");
+                c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+                ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+                return pg.render({ canvasContext: ctx, viewport: vp, intent: "print", annotationMode: 2 }).promise.then(function () {
+                  return new Promise(function (res) { c.toBlob(res, "image/jpeg", q); });
+                }).then(function (b) { c.width = c.height = 0; return b.arrayBuffer(); }).then(function (jb) {
+                  return out.embedJpg(jb).then(function (img) {
+                    var page = out.addPage([vp1.width, vp1.height]);
+                    page.drawImage(img, { x: 0, y: 0, width: vp1.width, height: vp1.height });
+                  });
+                });
+              });
+            });
+          })(n);
+          return chain.then(function () { src.destroy(); return out.save({ useObjectStreams: true }); });
+        });
+      });
+    });
+  }
+  $("shrinkBtn").addEventListener("click", function () {
+    if (mode !== "pdf") return;
+    commitTextEditor();
+    shrinkOut = null; $("shrinkResult").hidden = true; $("shrinkSave").hidden = true; $("shrinkGo").hidden = false; $("shrinkGo").disabled = false;
+    $("shrinkInfo").textContent = "Menší súbor sa ľahšie pošle e-mailom.";
+    currentPdfBytes(false).then(function (b) { shrinkSrc = b.length; $("shrinkInfo").textContent = "Teraz má súbor " + fmtSize(b.length) + ". Vyber, ako veľmi ho chceš zmenšiť."; }).catch(function () {});
+    $("shrinkBack").hidden = false;
+  });
+  $("shrinkCancel").addEventListener("click", function () { $("shrinkBack").hidden = true; });
+  document.querySelectorAll('input[name="shrinkLvl"]').forEach(function (r) { r.addEventListener("change", function () { $("shrinkSave").hidden = true; $("shrinkGo").hidden = false; $("shrinkResult").hidden = true; }); });
+  $("shrinkGo").addEventListener("click", function () {
+    var lvl = document.querySelector('input[name="shrinkLvl"]:checked').value;
+    $("shrinkGo").disabled = true; $("shrinkGo").textContent = "Zmenšujem…";
+    currentPdfBytes(false).then(function (b) { shrinkSrc = b.length; return shrinkPdf(b, lvl); }).then(function (o) {
+      status(null);
+      var pct = Math.round((1 - o.length / shrinkSrc) * 100), r = $("shrinkResult");
+      r.hidden = false;
+      if (o.length >= shrinkSrc * 0.97) {
+        r.textContent = "Tento súbor sa už viac zmenšiť nedá (" + fmtSize(o.length) + "). Skús voľbu „Čo najmenší“.";
+        shrinkOut = null; $("shrinkSave").hidden = true;
+      } else {
+        r.textContent = "Hotovo: " + fmtSize(shrinkSrc) + " → " + fmtSize(o.length) + " (o " + pct + " % menej).";
+        shrinkOut = o; $("shrinkSave").hidden = false; $("shrinkGo").hidden = true;
+      }
+      window.ptTrack && window.ptTrack("zmensit-pdf");
+    }).catch(function (e) {
+      console.error(e); status(pdfError(e), true, 6000);
+    }).then(function () { $("shrinkGo").disabled = false; $("shrinkGo").textContent = "Zmenšiť"; });
+  });
+  $("shrinkSave").addEventListener("click", function () {
+    if (!shrinkOut) return;
+    var n = plainName(baseName(pdfName) + "-zmensene.pdf");
+    saveBlob(new Blob([shrinkOut], { type: "application/pdf" }), n);
+    $("shrinkBack").hidden = true;
+    status("Uložené ako " + n + ". Nájdeš ho v Stiahnutých súboroch.", false, 5000);
+  });
+
   $("nativeBtn").addEventListener("click", function () {
     var w = window.open("", "_blank");
     currentPdfBytes(false).then(function (b) {
@@ -24414,7 +24509,7 @@ var __async = (__this, __arguments, generator) => {
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v13", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v14", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
