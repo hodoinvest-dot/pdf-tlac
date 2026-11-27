@@ -394,7 +394,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v16 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v17 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -445,6 +445,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
         </select>
       </label>
       <button class="linkish" id="shrinkBtn" type="button">Zmenšiť PDF</button>
+      <button class="linkish" id="splitBtn" type="button">Rozdeliť PDF</button>
       <button class="linkish" id="nativeBtn" type="button">Otvoriť v prehliadači</button>
       <button class="linkish" id="shareBtn" type="button" hidden>Poslať do inej apky</button>
       <span class="count" id="count"></span>
@@ -692,7 +693,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v16 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v17 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -778,6 +779,18 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     </ol>
     <label class="inline"><input type="checkbox" id="pdfOutNoMore"> Nabudúce už neukazovať</label>
     <div class="row"><button type="button" id="pdfOutCancel">Zrušiť</button><button type="button" class="primary" id="pdfOutGo">Pokračovať</button></div>
+  </div>
+</div>
+<div class="modal-back" id="splitBack" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="splitTitle">
+    <h3 id="splitTitle">Rozdeliť PDF</h3>
+    <p id="splitInfo"></p>
+    <label class="inline-opt"><input type="radio" name="splitMode" value="each" checked> <span><b>Každú stranu zvlášť</b><br><small>Z každej strany bude samostatné PDF.</small></span></label>
+    <label class="inline-opt"><input type="radio" name="splitMode" value="ranges"> <span><b>Podľa strán, ktoré napíšem</b><br><small>Napr. <b>1-3, 4-5, 6</b> = 3 súbory.</small>
+      <input id="splitRanges" type="text" inputmode="numeric" placeholder="napr. 1-3, 4-5, 6" autocomplete="off" style="margin-top:6px;width:100%"></span></label>
+    <label class="inline-opt"><input type="radio" name="splitMode" value="sel"> <span><b>Iba označené strany</b><br><small>Strany s modrou fajkou dám do jedného nového PDF.</small></span></label>
+    <p class="small" id="splitNote">Viac súborov ti uložím naraz v jednom balíku .zip.</p>
+    <div class="row"><button type="button" id="splitCancel">Zrušiť</button><button type="button" class="primary" id="splitGo">Rozdeliť a uložiť</button></div>
   </div>
 </div>
 <div class="modal-back" id="noteBack" hidden>
@@ -22560,6 +22573,78 @@ var __async = (__this, __arguments, generator) => {
   $("pdfOutCancel").addEventListener("click", function () { $("pdfOutBack").hidden = true; });
   window.addEventListener("afterprint", function () { if (pdfOutTitle !== null) { document.title = pdfOutTitle; pdfOutTitle = null; } });
 
+  /* ---------- Rozdeliť PDF ---------- */
+  function splitGroups(how) {
+    var n = pages.length;
+    if (how === "each") return pages.map(function (p, i) { return [i]; });
+    if (how === "sel") { var g = []; pages.forEach(function (p, i) { if (p.sel) g.push(i); }); return g.length ? [g] : null; }
+    var t = $("splitRanges").value.replace(/\s+/g, "").replace(/[–—]/g, "-"), out = [];
+    if (!t) return null;
+    var parts = t.split(/[,;]/);
+    for (var k = 0; k < parts.length; k++) {
+      if (!parts[k]) continue;
+      var m = parts[k].match(/^(\d+)(?:-(\d+)?)?$/);
+      if (!m) return null;
+      var a = +m[1], b = m[2] ? +m[2] : (/-$/.test(parts[k]) ? n : a);
+      if (a > b) { var x = a; a = b; b = x; }
+      a = Math.max(1, a); b = Math.min(n, b);
+      if (a > b) return null;
+      var grp = []; for (var i = a; i <= b; i++) grp.push(i - 1); out.push(grp);
+    }
+    return out.length ? out : null;
+  }
+  function grpName(g) { return g.length === 1 ? "strana-" + (g[0] + 1) : "strany-" + (g[0] + 1) + "-" + (g[g.length - 1] + 1); }
+  $("splitBtn").addEventListener("click", function () {
+    if (mode !== "pdf" || !pages.length) return;
+    commitTextEditor();
+    var k = pages.length;
+    $("splitInfo").textContent = "PDF má " + k + (k === 1 ? " stranu" : k < 5 ? " strany" : " strán") + ". Ako ho chceš rozdeliť?";
+    $("splitRanges").value = ""; $("splitBack").hidden = false;
+  });
+  $("splitRanges").addEventListener("focus", function () { document.querySelector('input[name="splitMode"][value="ranges"]').checked = true; });
+  $("splitCancel").addEventListener("click", function () { $("splitBack").hidden = true; });
+  $("splitGo").addEventListener("click", function () {
+    var how = document.querySelector('input[name="splitMode"]:checked').value;
+    var groups = splitGroups(how);
+    if (!groups) { status(how === "sel" ? "Nie je označená žiadna strana." : "Napíš strany, napr. 1-3, 4-5, 6", true, 5000); return; }
+    $("splitGo").disabled = true; $("splitGo").textContent = "Pracujem…";
+    var base = plainName(baseName(pdfName));
+    Promise.all([loadLib("lib-pdflib", "PDFLib"), currentPdfBytes(false)]).then(function (r) {
+      var P = r[0];
+      return P.PDFDocument.load(r[1], { updateMetadata: false }).then(function (src) {
+        var outs = [], chain = Promise.resolve();
+        groups.forEach(function (g, gi) {
+          chain = chain.then(function () {
+            status("Vytváram súbor " + (gi + 1) + " / " + groups.length + "…");
+            return P.PDFDocument.create().then(function (d) {
+              return d.copyPages(src, g).then(function (cp) { cp.forEach(function (pg) { d.addPage(pg); }); return d.save({ useObjectStreams: true }); })
+                .then(function (b) { outs.push({ name: base + "-" + (how === "sel" ? "vybrane-strany" : grpName(g)) + ".pdf", bytes: b }); });
+            });
+          });
+        });
+        return chain.then(function () { return outs; });
+      });
+    }).then(function (outs) {
+      if (outs.length === 1) {
+        saveBlob(new Blob([outs[0].bytes], { type: "application/pdf" }), outs[0].name);
+        status("Uložené ako " + outs[0].name + ". Nájdeš ho v Stiahnutých súboroch.", false, 6000);
+        return;
+      }
+      return loadLib("lib-xlsx", "XLSX").then(function (X) {
+        var C = X.CFB, z = C.utils.cfb_new();
+        outs.forEach(function (o) { C.utils.cfb_add(z, o.name, o.bytes); });
+        var zip = C.write(z, { fileType: "zip", type: "array", compression: false });
+        var zn = base + "-rozdelene.zip";
+        saveBlob(new Blob([zip], { type: "application/zip" }), zn);
+        status(outs.length + (outs.length < 5 ? " súbory PDF sú uložené" : " súborov PDF je uložených") + " v balíku " + zn + " (v Stiahnutých súboroch). Otvoríš ho dvojklikom.", false, 8000);
+      });
+    }).then(function () {
+      $("splitBack").hidden = true;
+      window.ptTrack && window.ptTrack("rozdelit-pdf");
+    }).catch(function (e) { console.error(e); status(pdfError(e), true, 6000); })
+      .then(function () { $("splitGo").disabled = false; $("splitGo").textContent = "Rozdeliť a uložiť"; });
+  });
+
   /* ---------- Zmenšiť PDF ---------- */
   function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " kB"; }
   var shrinkOut = null, shrinkSrc = 0;
@@ -24627,7 +24712,7 @@ var __async = (__this, __arguments, generator) => {
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v16", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v17", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
