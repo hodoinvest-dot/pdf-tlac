@@ -155,6 +155,7 @@ body.dragging .drop { border-color: var(--accent); background: var(--accent-soft
 .types { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .chip { font: 700 12px/1 var(--font-display); letter-spacing: .04em; padding: 6px 10px; border-radius: 999px; border: 1px solid currentColor; }
 .chip.pdf { color: var(--danger); } .chip.word { color: var(--word); } .chip.excel { color: var(--excel); }
+.chip.img { color: #8e24aa; border-color: #8e24aa; }
 .new-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
 .new-card {
   display: flex; gap: 14px; align-items: center; text-align: left; padding: 18px; border-radius: 14px;
@@ -393,7 +394,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v15 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v16 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -428,7 +429,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     <!-- PDF nástroje -->
     <div class="tools" id="toolsPdf" hidden>
       <span class="seg" role="tablist"><button type="button" data-pview="pages" class="on">Strany a tlač</button><button type="button" data-pview="edit">Upraviť PDF</button></span>
-      <button class="linkish" id="appendBtn" type="button">+ Pripojiť PDF</button>
+      <button class="linkish" id="appendBtn" type="button">+ Pripojiť PDF alebo fotku</button>
       <button class="linkish" id="blankBtn" type="button">+ Prázdna strana</button>
       <label for="range">Strany
         <input id="range" type="text" inputmode="numeric" placeholder="napr. 1-3, 5" autocomplete="off">
@@ -595,7 +596,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
       </svg>
       <h2 id="dropTitle">Pretiahni sem súbor</h2>
       <p id="dropText">Alebo klikni na tlačidlo a vyber súbor z počítača. Súbor zostáva len u teba, nikam sa neodosiela.</p>
-      <div class="types"><span class="chip pdf">PDF</span><span class="chip word">WORD .docx</span><span class="chip excel">EXCEL .xlsx .xls .csv</span></div>
+      <div class="types"><span class="chip pdf">PDF</span><span class="chip img">FOTKY .jpg .png</span><span class="chip word">WORD .docx</span><span class="chip excel">EXCEL .xlsx .xls .csv</span></div>
       <button class="primary" id="openBtn2" type="button">Vybrať súbor</button>
     </div>
     <div class="new-row">
@@ -610,6 +611,10 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
       <button type="button" class="new-card" id="batchBtn">
         <span class="ico" style="background:var(--accent)"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V3h10v5M5 8h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2z" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></span>
         <span><b>Hromadná tlač PDF</b><span>Vyber naraz viac PDF (napr. faktúry). Vytlačia sa všetky za sebou jedným kliknutím.</span></span>
+      </button>
+      <button type="button" class="new-card" id="imgBtn">
+        <span class="ico" style="background:#8e24aa"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="#fff" stroke-width="2"/><circle cx="9" cy="10" r="1.8" fill="#fff"/><path d="M4 17l5-5 4 4 3-3 4 4" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></span>
+        <span><b>Fotky → PDF</b><span>Odfoť doklad alebo vyber fotky. Spojím ich do jedného PDF, ktoré vytlačíš alebo uložíš.</span></span>
       </button>
     </div>
     <div class="start-foot">
@@ -654,8 +659,9 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
   <button type="button" data-xm="clear">Vymazať obsah</button>
   <button type="button" data-xm="clearFmt">Vymazať formát</button>
 </div>
-<input type="file" id="file" multiple accept=".pdf,.docx,.xlsx,.xlsm,.xls,.csv,.ods,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
-<input type="file" id="fileAppend" accept=".pdf,application/pdf" multiple hidden>
+<input type="file" id="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,image/jpeg,image/png,image/webp,.pdf,.docx,.xlsx,.xlsm,.xls,.csv,.ods,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
+<input type="file" id="fileAppend" accept=".pdf,application/pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple hidden>
+<input type="file" id="fileImg" accept="image/*" multiple hidden>
 <input type="file" id="fileImage" accept="image/*" hidden>
 <div class="pop" id="pop" hidden></div>
 <div id="status" class="status" role="status" hidden></div>
@@ -686,7 +692,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v15 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v16 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -21110,6 +21116,7 @@ var __async = (__this, __arguments, generator) => {
     else if (m.pt === "state") { t.title = m.title || ""; t.kind = m.kind || "start"; t.dirty = !!m.dirty; render(t); }
     else if (m.pt === "openNew") { (m.files || []).forEach(function (f) { var nt = newTab({ pt: "open", file: f }); flush(nt); }); }
     else if (m.pt === "newDoc") { newTab({ pt: "new", what: m.what }); }
+    else if (m.pt === "imagesNew" && m.files && m.files.length) { newTab({ pt: "images", files: m.files }); }
     else if (m.pt === "pdfBytes" && collect && collect.wait[t.id]) {
       delete collect.wait[t.id];
       if (m.bytes) collect.got[t.id] = new File([m.bytes], m.name || "dokument.pdf", { type: "application/pdf" });
@@ -21271,6 +21278,15 @@ var __async = (__this, __arguments, generator) => {
   function openMany(list) {
     var files = Array.prototype.slice.call(list || []);
     if (!files.length) return;
+    var imgs = files.filter(function (f) { return kindOf(f) === "img"; });
+    if (imgs.length > 1) {
+      // viac fotiek naraz = jedno PDF, ostatné súbory do nových kariet
+      var rest = files.filter(function (f) { return kindOf(f) !== "img"; });
+      if (!inTab || mode === "start") openImages(imgs);
+      else parent.postMessage({ pt: "imagesNew", files: imgs }, "*");
+      if (inTab && rest.length) parent.postMessage({ pt: "openNew", files: rest }, "*");
+      return;
+    }
     if (inTab) {
       var here = mode === "start" ? files.shift() : null;
       if (files.length) parent.postMessage({ pt: "openNew", files: files }, "*");
@@ -21293,10 +21309,14 @@ var __async = (__this, __arguments, generator) => {
     if (/\.docx$/.test(n) || t.indexOf("wordprocessingml") >= 0) return "doc";
     if (/\.(xlsx|xlsm|xls|csv|ods)$/.test(n) || t.indexOf("spreadsheetml") >= 0 || t === "application/vnd.ms-excel" || t === "text/csv") return "sheet";
     if (/\.doc$/.test(n) || t === "application/msword") return "olddoc";
+    if (/\.(jpe?g|png|webp|gif|bmp)$/.test(n) || /^image\/(jpeg|png|webp|gif|bmp)$/.test(t)) return "img";
+    if (/\.(heic|heif)$/.test(n) || /heic|heif/.test(t)) return "heic";
     return null;
   }
   function openAny(file) {
     var k = kindOf(file);
+    if (k === "img") { openImages([file]); return; }
+    if (k === "heic") { status("Fotky HEIC z iPhonu zatiaľ neviem otvoriť. V iPhone nastav Fotoaparát → Formáty → Najkompatibilnejší, alebo pošli fotku ako JPG.", true, 9000); return; }
     if (k === "olddoc") { status("Starý formát .doc neviem otvoriť. Vo Worde ho ulož ako .docx a skús znova.", true, 7000); return; }
     if (!k) { status("Tento typ súboru nepoznám. Otvor PDF, Word (.docx) alebo Excel (.xlsx, .xls, .csv).", true, 6000); return; }
     confirmDiscard().then(function (ok) {
@@ -21390,6 +21410,62 @@ var __async = (__this, __arguments, generator) => {
           return { id: uid++, d: di, n: k + 1, rot: 0, baseRot: p.rotate || 0, view: p.view.slice(), annots: [], sel: true };
         });
       });
+    });
+  }
+
+  /* ---------- Fotky → PDF ---------- */
+  $("imgBtn").addEventListener("click", function () { $("fileImg").value = ""; $("fileImg").click(); });
+  $("fileImg").addEventListener("change", function () {
+    var f = [].slice.call($("fileImg").files).filter(function (x) { return kindOf(x) === "img"; });
+    if (f.length) openImages(f); else if ($("fileImg").files.length) status("Vyber fotky vo formáte JPG alebo PNG.", true, 5000);
+  });
+  // fotky → bajty PDF: každá fotka na jednu stranu A4 (na šírku, ak je fotka široká), s okrajom 1 cm
+  function imagesToPdf(files) {
+    return loadLib("lib-pdflib", "PDFLib").then(function (P) {
+      return P.PDFDocument.create().then(function (out) {
+        var chain = Promise.resolve(), bad = [];
+        files.forEach(function (f, i) {
+          chain = chain.then(function () {
+            status("Spracúvam fotku " + (i + 1) + " / " + files.length + "…");
+            return createImageBitmap(f, { imageOrientation: "from-image" }).then(function (bmp) {
+              var max = 2480, k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+              var c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+              var ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(bmp, 0, 0, c.width, c.height);
+              bmp.close && bmp.close();
+              return new Promise(function (res) { c.toBlob(res, "image/jpeg", 0.85); }).then(function (b) {
+                var w = c.width, h = c.height; c.width = c.height = 0;
+                return b.arrayBuffer().then(function (ab) { return out.embedJpg(ab); }).then(function (img) {
+                  var land = w > h * 1.08, PW = land ? 841.89 : 595.28, PH = land ? 595.28 : 841.89, m = 28.35;
+                  var sc = Math.min((PW - 2 * m) / w, (PH - 2 * m) / h);
+                  var dw = w * sc, dh = h * sc;
+                  out.addPage([PW, PH]).drawImage(img, { x: (PW - dw) / 2, y: (PH - dh) / 2, width: dw, height: dh });
+                });
+              });
+            }).catch(function (e) { console.error(e); bad.push(f.name); });
+          });
+        });
+        return chain.then(function () {
+          if (!out.getPageCount()) throw new Error("img");
+          return out.save().then(function (b) { return { bytes: b, bad: bad }; });
+        });
+      });
+    });
+  }
+  function openImages(list) {
+    var files = Array.prototype.slice.call(list || []);
+    if (!files.length) return;
+    confirmDiscard().then(function (ok) {
+      if (!ok) return;
+      setDirty(false);
+      imagesToPdf(files).then(function (r) {
+        var nm = files.length === 1 ? baseName(files[0].name) + ".pdf" : "fotky.pdf";
+        window.ptTrack && window.ptTrack("fotky-pdf");
+        openPdf(new File([r.bytes], nm, { type: "application/pdf" }));
+        setTimeout(function () {
+          setDirty(true);
+          status((files.length === 1 ? "Fotka je" : files.length + " fotiek je") + " v PDF. Teraz ho môžeš vytlačiť alebo Uložiť." + (r.bad.length ? " Neotvorilo sa: " + r.bad.join(", ") : ""), !!r.bad.length, 6000);
+        }, 400);
+      }).catch(function (e) { console.error(e); status("Fotky sa nepodarilo spracovať. Skús JPG alebo PNG.", true, 6000); });
     });
   }
 
@@ -21661,6 +21737,7 @@ var __async = (__this, __arguments, generator) => {
     files.forEach(function (f) {
       chain = chain.then(function () {
         status("Pripájam " + f.name + "…");
+        if (kindOf(f) === "img") return imagesToPdf([f]).then(function (r) { return loadPdfDoc(new File([r.bytes], f.name + ".pdf", { type: "application/pdf" })); }).then(function (list) { pages = pages.concat(list); added += list.length; });
         return loadPdfDoc(f).then(function (list) { pages = pages.concat(list); added += list.length; });
       });
     });
@@ -24485,6 +24562,7 @@ var __async = (__this, __arguments, generator) => {
       if (m.pt === "open" && m.file) { openAny(m.file); }
       else if (m.pt === "new") { if (m.what === "doc") newDoc(); else newSheet(); }
       else if (m.pt === "batch" && m.files) { openPdfBatch(m.files, m.print); }
+      else if (m.pt === "images" && m.files) { openImages(m.files); }
       else if (m.pt === "getPdf") {
         if (mode !== "pdf" || !pages.length) { parent.postMessage({ pt: "pdfBytes", bytes: null }, "*"); return; }
         commitTextEditor();
@@ -24549,7 +24627,7 @@ var __async = (__this, __arguments, generator) => {
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v15", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v16", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
