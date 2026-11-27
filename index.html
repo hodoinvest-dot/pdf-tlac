@@ -22,7 +22,7 @@
    feedbackUrl : adresa formulára (napr. https://formspree.io/f/xxxx). Prázdne = hodnotenie sa pošle e-mailom cez contactEmail.
    contactEmail: kontaktný e-mail, ktorý uvidia používatelia.
    operator    : meno prevádzkovateľa do stránky Súkromie.            */
-window.PT_CONFIG = { goatcounter: "pdftlac", feedbackUrl: "https://formsubmit.co/ajax/hodoinvest@gmail.com", contactEmail: "hodoinvest@gmail.com", operator: "ALFA TEAM, s.r.o., Priekopnícka 24, 821 06 Bratislava, IČO 35978805, DIČ 2022127987. Zapísaná v Obchodnom registri Okresného súdu Bratislava I, oddiel Sro, vložka č. 39384/B" };
+window.PT_CONFIG = { goatcounter: "pdftlac", feedbackUrl: "https://formsubmit.co/ajax/dead0adc025d0a15b09f02c38dc04fd5", contactEmail: "hodoinvest@gmail.com", operator: "ALFA TEAM, s.r.o., Priekopnícka 24, 821 06 Bratislava, IČO 35978805, DIČ 2022127987. Zapísaná v Obchodnom registri Okresného súdu Bratislava I, oddiel Sro, vložka č. 39384/B" };
 (function () {
   var C = window.PT_CONFIG;
   function off() {
@@ -386,7 +386,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v12 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v13 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -674,7 +674,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v12 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v13 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -24414,7 +24414,7 @@ var __async = (__this, __arguments, generator) => {
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v12", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v13", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
