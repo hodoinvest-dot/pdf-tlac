@@ -155,6 +155,7 @@ body.dragging .drop { border-color: var(--accent); background: var(--accent-soft
 .types { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .chip { font: 700 12px/1 var(--font-display); letter-spacing: .04em; padding: 6px 10px; border-radius: 999px; border: 1px solid currentColor; }
 .chip.pdf { color: var(--danger); } .chip.word { color: var(--word); } .chip.excel { color: var(--excel); }
+.chip.inv { color: #1f3b6e; border-color: #1f3b6e; }
 .chip.img { color: #8e24aa; border-color: #8e24aa; }
 .new-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
 .new-card {
@@ -400,7 +401,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v18 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v19 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -451,6 +452,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
         </select>
       </label>
       <button class="primary small-btn" id="formBtn" type="button" hidden>Vyplniť formulár</button>
+      <button class="primary small-btn" id="invXmlBtn" type="button" hidden>Zobraziť e-faktúru</button>
       <button class="linkish" id="shrinkBtn" type="button">Zmenšiť PDF</button>
       <button class="linkish" id="splitBtn" type="button">Rozdeliť PDF</button>
       <button class="linkish" id="nativeBtn" type="button">Otvoriť v prehliadači</button>
@@ -529,6 +531,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
       <span class="sep"></span>
       <button type="button" data-cmd="removeFormat" title="Vymazať formátovanie">Vymazať formát</button>
       <button type="button" id="tableBtn" title="Vložiť tabuľku">Tabuľka</button>
+      <button type="button" class="primary" id="invAttBtn" hidden>Otvoriť priložené PDF</button>
       <button type="button" data-cmd="undo" title="Späť (Ctrl+Z)" aria-label="Späť"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button type="button" data-cmd="redo" title="Znova (Ctrl+Y)" aria-label="Znova"><svg width="18" height="18" viewBox="0 0 24 24"><path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
@@ -604,7 +607,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
       </svg>
       <h2 id="dropTitle">Pretiahni sem súbor</h2>
       <p id="dropText">Alebo klikni na tlačidlo a vyber súbor z počítača. Súbor zostáva len u teba, nikam sa neodosiela.</p>
-      <div class="types"><span class="chip pdf">PDF</span><span class="chip img">FOTKY .jpg .png</span><span class="chip word">WORD .docx</span><span class="chip excel">EXCEL .xlsx .xls .csv</span></div>
+      <div class="types"><span class="chip pdf">PDF</span><span class="chip img">FOTKY .jpg .png</span><span class="chip word">WORD .docx</span><span class="chip excel">EXCEL .xlsx .xls .csv</span><span class="chip inv">E-FAKTÚRA .xml</span></div>
       <button class="primary" id="openBtn2" type="button">Vybrať súbor</button>
     </div>
     <div class="new-row">
@@ -667,7 +670,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
   <button type="button" data-xm="clear">Vymazať obsah</button>
   <button type="button" data-xm="clearFmt">Vymazať formát</button>
 </div>
-<input type="file" id="file" multiple accept=".jpg,.jpeg,.png,.webp,.gif,.bmp,image/jpeg,image/png,image/webp,.pdf,.docx,.xlsx,.xlsm,.xls,.csv,.ods,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
+<input type="file" id="file" multiple accept=".xml,.isdoc,text/xml,application/xml,.jpg,.jpeg,.png,.webp,.gif,.bmp,image/jpeg,image/png,image/webp,.pdf,.docx,.xlsx,.xlsm,.xls,.csv,.ods,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
 <input type="file" id="fileAppend" accept=".pdf,application/pdf,.jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" multiple hidden>
 <input type="file" id="fileImg" accept="image/*" multiple hidden>
 <input type="file" id="fileImage" accept="image/*" hidden>
@@ -700,7 +703,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v18 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v19 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -21270,8 +21273,8 @@ var __async = (__this, __arguments, generator) => {
     $("toolsSheet").hidden = m !== "sheet";
     $("saveBtn").hidden = !(m === "doc" || m === "sheet" || m === "pdf");
     $("pdfOutBtn").hidden = !(m === "doc" || m === "sheet");
-    $("formBtn").hidden = true;
-    if (m === "pdf") checkForms();
+    $("formBtn").hidden = true; $("invXmlBtn").hidden = true; $("invAttBtn").hidden = true;
+    if (m === "pdf") { checkForms(); checkEmbeddedInvoice(); }
     $("toolsEdit").hidden = true; $("hintRow").hidden = true;
     if (m === "pdf") { $("toolsPdf").hidden = pdfView !== "pages"; $("toolsEdit").hidden = pdfView !== "edit"; $("hintRow").hidden = pdfView !== "edit"; $("viewPdf").hidden = pdfView !== "pages"; }
     $("editPane").hidden = !(m === "pdf" && pdfView === "edit");
@@ -21341,12 +21344,14 @@ var __async = (__this, __arguments, generator) => {
     if (/\.(xlsx|xlsm|xls|csv|ods)$/.test(n) || t.indexOf("spreadsheetml") >= 0 || t === "application/vnd.ms-excel" || t === "text/csv") return "sheet";
     if (/\.doc$/.test(n) || t === "application/msword") return "olddoc";
     if (/\.(jpe?g|png|webp|gif|bmp)$/.test(n) || /^image\/(jpeg|png|webp|gif|bmp)$/.test(t)) return "img";
+    if (/\.(xml|isdoc)$/.test(n) || /[/+]xml$/.test(t)) return "xml";
     if (/\.(heic|heif)$/.test(n) || /heic|heif/.test(t)) return "heic";
     return null;
   }
   function openAny(file) {
     var k = kindOf(file);
     if (k === "img") { openImages([file]); return; }
+    if (k === "xml") { confirmDiscard().then(function (ok) { if (ok) { setDirty(false); openEInvoice(file); } }); return; }
     if (k === "heic") { status("Fotky HEIC z iPhonu zatiaľ neviem otvoriť. V iPhone nastav Fotoaparát → Formáty → Najkompatibilnejší, alebo pošli fotku ako JPG.", true, 9000); return; }
     if (k === "olddoc") { status("Starý formát .doc neviem otvoriť. Vo Worde ho ulož ako .docx a skús znova.", true, 7000); return; }
     if (!k) { status("Tento typ súboru nepoznám. Otvor PDF, Word (.docx) alebo Excel (.xlsx, .xls, .csv).", true, 6000); return; }
@@ -22765,6 +22770,224 @@ var __async = (__this, __arguments, generator) => {
     }).catch(function (e) { console.error(e); status("Formulár sa nepodarilo vyplniť. " + pdfError(e), true, 7000); })
       .then(function () { $("formOk").disabled = false; });
   });
+
+  /* =====================================================================
+     E-FAKTÚRA (UBL / Peppol BIS 3, CII / Factur-X / ZUGFeRD, ISDOC)
+     ===================================================================== */
+  var EI = (function () {
+    function kids(el, name) { var r = []; if (!el) return r; for (var c = el.firstElementChild; c; c = c.nextElementSibling) if (c.localName === name) r.push(c); return r; }
+    function kid(el, name) { return kids(el, name)[0] || null; }
+    // cesta "A/B/C" cez priame deti (bez ohľadu na menný priestor)
+    function at(el, path) { var p = path.split("/"); for (var i = 0; i < p.length && el; i++) el = kid(el, p[i]); return el; }
+    function tx(el, path) { var e = path ? at(el, path) : el; return e ? e.textContent.trim() : ""; }
+    function all(el, path) { var p = path.split("/"), cur = [el]; p.forEach(function (n) { var nx = []; cur.forEach(function (c) { nx = nx.concat(kids(c, n)); }); cur = nx; }); return cur; }
+    var UNITS = { C62: "ks", H87: "ks", EA: "ks", XPP: "ks", PCE: "ks", HUR: "hod", KGM: "kg", GRM: "g", MTR: "m", LTR: "l", DAY: "deň", MON: "mes.", MTK: "m²", MTQ: "m³", SET: "sada", KMT: "km", TNE: "t", PR: "pár", ZZ: "", "1I": "" };
+    var TYPES = { "380": "Faktúra", "381": "Dobropis", "383": "Ťarchopis", "384": "Opravná faktúra", "386": "Zálohová faktúra", "389": "Samofaktúra", "326": "Čiastková faktúra", "751": "Faktúra" };
+    var PAY = { "10": "Hotovosť", "20": "Šek", "30": "Prevodom", "31": "Prevodom", "42": "Prevodom", "48": "Kartou", "49": "Inkaso", "54": "Kartou", "55": "Kartou", "57": "Trvalý príkaz", "58": "Prevodom (SEPA)", "59": "Inkaso (SEPA)", "97": "Zápočet", "ZZZ": "Iný spôsob" };
+    function num(v) { var n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? null : n; }
+    function money(v, cur) { var n = num(v); if (n === null) return ""; return n.toLocaleString("sk-SK", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + (cur ? " " + cur : ""); }
+    function qty(v) { var n = num(v); return n === null ? "" : n.toLocaleString("sk-SK", { maximumFractionDigits: 4 }); }
+    function date(v) { v = String(v || "").trim(); var m = v.match(/^(\d{4})-?(\d{2})-?(\d{2})/); return m ? +m[3] + ". " + +m[2] + ". " + m[1] : v; }
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+
+    function ublParty(p) {
+      if (!p) return null;
+      var a = at(p, "PostalAddress");
+      return {
+        name: tx(p, "PartyLegalEntity/RegistrationName") || tx(p, "PartyName/Name"),
+        street: [tx(a, "StreetName"), tx(a, "AdditionalStreetName"), tx(a, "AddressLine/Line")].filter(Boolean).join(", "),
+        city: [tx(a, "PostalZone"), tx(a, "CityName")].filter(Boolean).join(" "),
+        country: tx(a, "Country/IdentificationCode"),
+        ico: tx(p, "PartyLegalEntity/CompanyID") || tx(p, "PartyIdentification/ID"),
+        vat: all(p, "PartyTaxScheme").map(function (t) { return tx(t, "CompanyID"); }).filter(Boolean).join(", "),
+        contact: [tx(p, "Contact/Name"), tx(p, "Contact/Telephone"), tx(p, "Contact/ElectronicMail")].filter(Boolean).join(" · "),
+        endpoint: tx(p, "EndpointID")
+      };
+    }
+    function parseUBL(r) {
+      var credit = r.localName === "CreditNote", cur = tx(r, "DocumentCurrencyCode");
+      var inv = {
+        format: "UBL" + (/peppol/i.test(tx(r, "CustomizationID")) ? " (Peppol)" : ""),
+        id: tx(r, "ID"), type: TYPES[tx(r, credit ? "CreditNoteTypeCode" : "InvoiceTypeCode")] || (credit ? "Dobropis" : "Faktúra"),
+        issue: date(tx(r, "IssueDate")), due: date(tx(r, "DueDate") || tx(r, "PaymentMeans/PaymentDueDate")),
+        delivery: date(tx(r, "Delivery/ActualDeliveryDate") || tx(r, "TaxPointDate")),
+        cur: cur, notes: all(r, "Note").map(function (n) { return n.textContent.trim(); }).filter(Boolean),
+        order: tx(r, "OrderReference/ID"), buyerRef: tx(r, "BuyerReference"),
+        seller: ublParty(at(r, "AccountingSupplierParty/Party")), buyer: ublParty(at(r, "AccountingCustomerParty/Party")),
+        pay: all(r, "PaymentMeans").map(function (pm) {
+          return { how: PAY[tx(pm, "PaymentMeansCode")] || tx(pm, "PaymentMeansCode"), vs: tx(pm, "PaymentID"), iban: tx(pm, "PayeeFinancialAccount/ID"), bic: tx(pm, "PayeeFinancialAccount/FinancialInstitutionBranch/ID"), bank: tx(pm, "PayeeFinancialAccount/Name") };
+        }),
+        terms: tx(r, "PaymentTerms/Note"),
+        lines: all(r, credit ? "CreditNoteLine" : "InvoiceLine").map(function (l) {
+          var q = at(l, credit ? "CreditedQuantity" : "InvoicedQuantity");
+          return { id: tx(l, "ID"), name: tx(l, "Item/Name"), desc: tx(l, "Item/Description"), qty: q ? q.textContent : "", unit: q ? q.getAttribute("unitCode") : "",
+            price: tx(l, "Price/PriceAmount"), vat: tx(l, "Item/ClassifiedTaxCategory/Percent"), total: tx(l, "LineExtensionAmount") };
+        }),
+        taxes: all(r, "TaxTotal/TaxSubtotal").map(function (t) { return { base: tx(t, "TaxableAmount"), tax: tx(t, "TaxAmount"), rate: tx(t, "TaxCategory/Percent"), reason: tx(t, "TaxCategory/TaxExemptionReason") }; }),
+        sum: { net: tx(r, "LegalMonetaryTotal/TaxExclusiveAmount") || tx(r, "LegalMonetaryTotal/LineExtensionAmount"), tax: tx(r, "TaxTotal/TaxAmount"),
+          gross: tx(r, "LegalMonetaryTotal/TaxInclusiveAmount"), prepaid: tx(r, "LegalMonetaryTotal/PrepaidAmount"), due: tx(r, "LegalMonetaryTotal/PayableAmount") },
+        files: all(r, "AdditionalDocumentReference").map(function (d) {
+          var o = at(d, "Attachment/EmbeddedDocumentBinaryObject");
+          return o ? { name: o.getAttribute("filename") || tx(d, "ID") || "priloha", mime: o.getAttribute("mimeCode") || "", b64: o.textContent.replace(/\s+/g, "") } : null;
+        }).filter(Boolean)
+      };
+      return inv;
+    }
+    function ciiParty(p) {
+      if (!p) return null;
+      var a = at(p, "PostalTradeAddress");
+      return {
+        name: tx(p, "Name"), street: [tx(a, "LineOne"), tx(a, "LineTwo")].filter(Boolean).join(", "),
+        city: [tx(a, "PostcodeCode"), tx(a, "CityName")].filter(Boolean).join(" "), country: tx(a, "CountryID"),
+        ico: tx(p, "SpecifiedLegalOrganization/ID") || tx(p, "ID"),
+        vat: all(p, "SpecifiedTaxRegistration/ID").map(function (e) { return e.textContent.trim(); }).join(", "),
+        contact: [tx(p, "DefinedTradeContact/PersonName"), tx(p, "DefinedTradeContact/TelephoneUniversalCommunication/CompleteNumber"), tx(p, "DefinedTradeContact/EmailURIUniversalCommunication/URIID")].filter(Boolean).join(" · "),
+        endpoint: tx(p, "URIUniversalCommunication/URIID")
+      };
+    }
+    function parseCII(r) {
+      var tr = at(r, "SupplyChainTradeTransaction"), ag = at(tr, "ApplicableHeaderTradeAgreement"), st = at(tr, "ApplicableHeaderTradeSettlement"), ms = at(st, "SpecifiedTradeSettlementHeaderMonetarySummation");
+      var cur = tx(st, "InvoiceCurrencyCode");
+      return {
+        format: "CII (Factur-X / ZUGFeRD)", id: tx(r, "ExchangedDocument/ID"), type: TYPES[tx(r, "ExchangedDocument/TypeCode")] || "Faktúra",
+        issue: date(tx(r, "ExchangedDocument/IssueDateTime/DateTimeString")), due: date(tx(st, "SpecifiedTradePaymentTerms/DueDateDateTime/DateTimeString")),
+        delivery: date(tx(tr, "ApplicableHeaderTradeDelivery/ActualDeliverySupplyChainEvent/OccurrenceDateTime/DateTimeString")),
+        cur: cur, notes: all(r, "ExchangedDocument/IncludedNote").map(function (n) { return tx(n, "Content"); }).filter(Boolean),
+        order: tx(ag, "BuyerOrderReferencedDocument/IssuerAssignedID"), buyerRef: tx(ag, "BuyerReference"),
+        seller: ciiParty(at(ag, "SellerTradeParty")), buyer: ciiParty(at(ag, "BuyerTradeParty")),
+        pay: all(st, "SpecifiedTradeSettlementPaymentMeans").map(function (pm) {
+          return { how: PAY[tx(pm, "TypeCode")] || tx(pm, "TypeCode"), vs: tx(st, "PaymentReference"), iban: tx(pm, "PayeePartyCreditorFinancialAccount/IBANID"), bic: tx(pm, "PayeeSpecifiedCreditorFinancialInstitution/BICID"), bank: tx(pm, "PayeePartyCreditorFinancialAccount/AccountName") };
+        }),
+        terms: tx(st, "SpecifiedTradePaymentTerms/Description"),
+        lines: all(tr, "IncludedSupplyChainTradeLineItem").map(function (l) {
+          var q = at(l, "SpecifiedLineTradeDelivery/BilledQuantity");
+          return { id: tx(l, "AssociatedDocumentLineDocument/LineID"), name: tx(l, "SpecifiedTradeProduct/Name"), desc: tx(l, "SpecifiedTradeProduct/Description"),
+            qty: q ? q.textContent : "", unit: q ? q.getAttribute("unitCode") : "", price: tx(l, "SpecifiedLineTradeAgreement/NetPriceProductTradePrice/ChargeAmount"),
+            vat: tx(l, "SpecifiedLineTradeSettlement/ApplicableTradeTax/RateApplicablePercent"), total: tx(l, "SpecifiedLineTradeSettlement/SpecifiedTradeSettlementLineMonetarySummation/LineTotalAmount") };
+        }),
+        taxes: all(st, "ApplicableTradeTax").map(function (t) { return { base: tx(t, "BasisAmount"), tax: tx(t, "CalculatedAmount"), rate: tx(t, "RateApplicablePercent"), reason: tx(t, "ExemptionReason") }; }),
+        sum: { net: tx(ms, "TaxBasisTotalAmount") || tx(ms, "LineTotalAmount"), tax: tx(ms, "TaxTotalAmount"), gross: tx(ms, "GrandTotalAmount"), prepaid: tx(ms, "TotalPrepaidAmount"), due: tx(ms, "DuePayableAmount") },
+        files: all(ag, "AdditionalReferencedDocument").map(function (d) {
+          var o = at(d, "AttachmentBinaryObject");
+          return o ? { name: o.getAttribute("filename") || tx(d, "IssuerAssignedID") || "priloha", mime: o.getAttribute("mimeCode") || "", b64: o.textContent.replace(/\s+/g, "") } : null;
+        }).filter(Boolean)
+      };
+    }
+    function parseISDOC(r) {
+      function party(p) {
+        if (!p) return null; var a = at(p, "PostalAddress");
+        return { name: tx(p, "PartyName/Name"), street: [tx(a, "StreetName"), tx(a, "BuildingNumber")].filter(Boolean).join(" "), city: [tx(a, "PostalZone"), tx(a, "CityName")].filter(Boolean).join(" "),
+          country: tx(a, "Country/IdentificationCode"), ico: tx(p, "PartyIdentification/ID"), vat: tx(p, "PartyTaxScheme/CompanyID"),
+          contact: [tx(p, "Contact/Name"), tx(p, "Contact/Telephone"), tx(p, "Contact/ElectronicMail")].filter(Boolean).join(" · "), endpoint: "" };
+      }
+      var cur = tx(r, "LocalCurrencyCode");
+      return {
+        format: "ISDOC", id: tx(r, "ID"), type: ({ "1": "Faktúra", "2": "Dobropis", "3": "Ťarchopis", "4": "Zálohová faktúra" })[tx(r, "DocumentType")] || "Faktúra",
+        issue: date(tx(r, "IssueDate")), due: date(tx(r, "PaymentMeans/Payment/Details/PaymentDueDate")), delivery: date(tx(r, "TaxPointDate")),
+        cur: cur, notes: [tx(r, "Note")].filter(Boolean), order: tx(r, "OrderReferences/OrderReference/SalesOrderID"), buyerRef: "",
+        seller: party(at(r, "AccountingSupplierParty/Party")), buyer: party(at(r, "AccountingCustomerParty/Party")),
+        pay: all(r, "PaymentMeans/Payment").map(function (pm) { return { how: PAY[tx(pm, "PaymentMeansCode")] || "", vs: tx(pm, "Details/VariableSymbol"), iban: tx(pm, "Details/IBAN") || tx(pm, "Details/ID"), bic: tx(pm, "Details/BIC"), bank: tx(pm, "Details/Name") }; }),
+        terms: "",
+        lines: all(r, "InvoiceLines/InvoiceLine").map(function (l) {
+          var q = at(l, "InvoicedQuantity");
+          return { id: tx(l, "ID"), name: tx(l, "Item/Description"), desc: "", qty: q ? q.textContent : "", unit: q ? q.getAttribute("unitCode") : "", price: tx(l, "UnitPrice"), vat: tx(l, "ClassifiedTaxCategory/Percent"), total: tx(l, "LineExtensionAmount") };
+        }),
+        taxes: all(r, "TaxTotal/TaxSubTotal").map(function (t) { return { base: tx(t, "TaxableAmount"), tax: tx(t, "TaxAmount"), rate: tx(t, "TaxCategory/Percent"), reason: "" }; }),
+        sum: { net: tx(r, "LegalMonetaryTotal/TaxExclusiveAmount"), tax: tx(r, "TaxTotal/TaxAmount"), gross: tx(r, "LegalMonetaryTotal/TaxInclusiveAmount"), prepaid: tx(r, "LegalMonetaryTotal/AlreadyClaimedTaxInclusiveAmount"), due: tx(r, "LegalMonetaryTotal/PayableAmount") },
+        files: []
+      };
+    }
+    function parse(text) {
+      var d = new DOMParser().parseFromString(text, "application/xml");
+      if (d.getElementsByTagName("parsererror").length) return null;
+      var r = d.documentElement, n = r.localName;
+      if ((n === "Invoice" || n === "CreditNote") && /isdoc/i.test(r.namespaceURI || "")) return parseISDOC(r);
+      if (n === "Invoice" || n === "CreditNote") return parseUBL(r);
+      if (n === "CrossIndustryInvoice") return parseCII(r);
+      return null;
+    }
+    function partyHtml(title, p) {
+      if (!p) return "<td></td>";
+      var rows = [p.street, p.city + (p.country ? ", " + p.country : "")].filter(function (x) { return x && x.trim() && x.trim() !== ","; }).map(esc).join("<br>");
+      var ids = [p.ico ? "<b>IČO</b> " + esc(p.ico) : "", p.vat ? "<b>IČ DPH / DIČ</b> " + esc(p.vat) : ""].filter(Boolean).join("<br>");
+      return '<td style="width:50%;vertical-align:top;border:1px solid #c9ced6;padding:10px 12px"><div style="font-size:9pt;color:#5b6470;text-transform:uppercase;letter-spacing:.04em">' + title + '</div>' +
+        '<div style="font-size:12pt;font-weight:700;margin:2px 0 4px">' + esc(p.name) + "</div>" + rows + (ids ? "<br>" + ids : "") + (p.contact ? '<br><span style="color:#5b6470">' + esc(p.contact) + "</span>" : "") + "</td>";
+    }
+    function render(v) {
+      var C = v.cur, th = 'style="background:#eef1f5;border:1px solid #c9ced6;padding:5px 6px;font-size:9pt;text-align:left"', td = 'style="border:1px solid #c9ced6;padding:5px 6px;vertical-align:top"', tdr = 'style="border:1px solid #c9ced6;padding:5px 6px;text-align:right;white-space:nowrap;vertical-align:top"';
+      var h = '<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr><td style="vertical-align:top"><div style="font-size:20pt;font-weight:700;color:#1f3b6e">' + esc(v.type) + "</div>" +
+        '<div style="font-size:13pt;font-weight:700">č. ' + esc(v.id) + '</div></td><td style="text-align:right;vertical-align:top;color:#5b6470;font-size:9pt">E-faktúra · ' + esc(v.format) + "</td></tr></table>";
+      h += '<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr>' + partyHtml("Dodávateľ", v.seller) + partyHtml("Odberateľ", v.buyer) + "</tr></table>";
+      var info = [["Dátum vystavenia", v.issue], ["Dátum dodania", v.delivery], ["Dátum splatnosti", v.due], ["Objednávka", v.order], ["Referencia odberateľa", v.buyerRef], ["Mena", C]];
+      v.pay.forEach(function (p) { info.push(["Spôsob platby", p.how], ["IBAN", p.iban], ["BIC", p.bic], ["Banka", p.bank], ["Variabilný symbol", p.vs]); });
+      info.push(["Platobné podmienky", v.terms]);
+      info = info.filter(function (x) { return x[1]; });
+      h += '<table style="width:100%;border-collapse:collapse;margin-bottom:12px">';
+      for (var i = 0; i < info.length; i += 2) {
+        h += "<tr>" + [info[i], info[i + 1]].map(function (x) { return x ? '<td style="padding:2px 6px;color:#5b6470;width:18%">' + esc(x[0]) + '</td><td style="padding:2px 6px;font-weight:600;width:32%">' + esc(x[1]) + "</td>" : "<td></td><td></td>"; }).join("") + "</tr>";
+      }
+      h += "</table>";
+      h += '<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><th ' + th + '>#</th><th ' + th + '>Položka</th><th ' + th + ' style="text-align:right">Množstvo</th><th ' + th + '>MJ</th><th ' + th + '>Cena/MJ</th><th ' + th + '>DPH %</th><th ' + th + '>Spolu bez DPH</th></tr>';
+      v.lines.forEach(function (l, k) {
+        h += "<tr><td " + td + ">" + esc(l.id || k + 1) + "</td><td " + td + "><b>" + esc(l.name) + "</b>" + (l.desc && l.desc !== l.name ? '<br><span style="color:#5b6470;font-size:9pt">' + esc(l.desc) + "</span>" : "") + "</td><td " + tdr + ">" + qty(l.qty) +
+          "</td><td " + td + ">" + esc(UNITS[l.unit] !== undefined ? UNITS[l.unit] : l.unit) + "</td><td " + tdr + ">" + money(l.price) + "</td><td " + tdr + ">" + esc(l.vat ? qty(l.vat) + " %" : "") + "</td><td " + tdr + ">" + money(l.total) + "</td></tr>";
+      });
+      h += "</table>";
+      if (v.taxes.length) {
+        h += '<table style="border-collapse:collapse;margin:0 0 10px auto;min-width:55%"><tr><th ' + th + '>Sadzba DPH</th><th ' + th + '>Základ</th><th ' + th + '>DPH</th></tr>';
+        v.taxes.forEach(function (t) { h += "<tr><td " + td + ">" + esc(t.rate !== "" ? qty(t.rate) + " %" : "") + (t.reason ? " <span style=\"color:#5b6470;font-size:9pt\">(" + esc(t.reason) + ")</span>" : "") + "</td><td " + tdr + ">" + money(t.base, C) + "</td><td " + tdr + ">" + money(t.tax, C) + "</td></tr>"; });
+        h += "</table>";
+      }
+      var sums = [["Spolu bez DPH", v.sum.net], ["DPH", v.sum.tax], ["Spolu s DPH", v.sum.gross], ["Uhradené zálohou", v.sum.prepaid]].filter(function (x) { return x[1] && !(x[0] === "Uhradené zálohou" && num(x[1]) === 0); });
+      h += '<table style="border-collapse:collapse;margin:0 0 10px auto;min-width:55%">';
+      sums.forEach(function (x) { h += '<tr><td style="padding:3px 8px">' + x[0] + '</td><td style="padding:3px 8px;text-align:right">' + money(x[1], C) + "</td></tr>"; });
+      h += '<tr><td style="padding:8px;border-top:2px solid #1f3b6e;color:#1f3b6e;font-size:13pt;font-weight:700">K úhrade</td><td style="padding:8px;border-top:2px solid #1f3b6e;color:#1f3b6e;font-size:13pt;font-weight:700;text-align:right">' + money(v.sum.due || v.sum.gross, C) + "</td></tr></table>";
+      if (v.notes.length) h += '<p style="color:#333"><b>Poznámka:</b> ' + v.notes.map(esc).join("<br>") + "</p>";
+      if (v.files.length) h += '<p style="color:#5b6470;font-size:9pt">Prílohy v e-faktúre: ' + v.files.map(function (f) { return esc(f.name); }).join(", ") + "</p>";
+      return h;
+    }
+    return { parse: parse, render: render };
+  })();
+
+  function openEInvoice(file, textIn) {
+    status("Otváram e-faktúru…");
+    (textIn != null ? Promise.resolve(textIn) : file.text()).then(function (text) {
+      var v = EI.parse(text);
+      if (!v) { status("Toto XML nie je e-faktúra, ktorú poznám (UBL/Peppol, CII/Factur-X, ISDOC).", true, 8000); return; }
+      showDoc(EI.render(v), baseName(file.name) + ".docx", { font: "Arial", size: 10, margins: { top: 850, right: 850, bottom: 850, left: 850 } });
+      lastInvoiceFiles = v.files;
+      window.ptTrack && window.ptTrack("e-faktura");
+      var pdfAtt = v.files.filter(function (f) { return /pdf/i.test(f.mime) || /\.pdf$/i.test(f.name); });
+      if (pdfAtt.length) { $("invAttBtn").hidden = false; $("invAttBtn").textContent = "Otvoriť priložené PDF (" + pdfAtt.length + ")"; }
+      status("E-faktúra " + v.id + " je zobrazená. Môžeš ju vytlačiť alebo uložiť ako PDF.", false, 6000);
+    }).catch(function (e) { console.error(e); status("E-faktúru sa nepodarilo otvoriť.", true, 6000); });
+  }
+  var lastInvoiceFiles = [];
+  $("invAttBtn").addEventListener("click", function () {
+    lastInvoiceFiles.filter(function (f) { return /pdf/i.test(f.mime) || /\.pdf$/i.test(f.name); }).forEach(function (f) {
+      var bin = atob(f.b64), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      var file = new File([u], /\.pdf$/i.test(f.name) ? f.name : f.name + ".pdf", { type: "application/pdf" });
+      if (inTab) parent.postMessage({ pt: "openNew", files: [file] }, "*"); else openAny(file);
+    });
+  });
+  // PDF s vloženou e-faktúrou (Factur-X / ZUGFeRD)
+  function checkEmbeddedInvoice() {
+    if (!docs.length || !docs[0].pdf.getAttachments) return;
+    var d0 = docs[0];
+    d0.pdf.getAttachments().then(function (att) {
+      if (!att || docs[0] !== d0) return;
+      var key = Object.keys(att).filter(function (k) { return /\.xml$/i.test(att[k].filename || k) && /factur|zugferd|xrechnung|invoice|faktur/i.test(att[k].filename || k); })[0];
+      if (!key) return;
+      var a = att[key], text = new TextDecoder("utf-8").decode(a.content);
+      if (!EI.parse(text)) return;
+      $("invXmlBtn").hidden = false;
+      $("invXmlBtn").onclick = function () {
+        var f = new File([text], (a.filename || "e-faktura.xml"), { type: "application/xml" });
+        if (inTab) parent.postMessage({ pt: "openNew", files: [f] }, "*"); else openAny(f);
+      };
+      status("V tomto PDF je aj e-faktúra. Klikni na „Zobraziť e-faktúru“.", false, 6000);
+    }).catch(function () {});
+  }
 
   /* ---------- Zmenšiť PDF ---------- */
   function fmtSize(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(n / 1024)) + " kB"; }
@@ -24833,7 +25056,7 @@ var __async = (__this, __arguments, generator) => {
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v18", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v19", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
