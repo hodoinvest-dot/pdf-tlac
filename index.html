@@ -423,6 +423,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 .tab:hover .pop, .tab.on .pop { display: grid; }
 .tab .pop:hover { background: var(--line); color: var(--fg); }
 .tab.dragging { opacity: .5; }
+.tabbar.drop-here { box-shadow: inset 0 -3px 0 var(--accent); background: var(--accent-soft); }
 @media (pointer: coarse) { .tab .pop { display: none !important; } }
 #tabAdd { width: 38px; height: 34px; margin-bottom: 3px; border: 0; border-radius: 8px; background: transparent; font-size: 24px; line-height: 1; color: var(--fg); cursor: pointer; flex: none; }
 #tabPrintAll { height: 34px; margin: 0 0 3px 4px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: 600 14px var(--font-body); cursor: pointer; flex: none; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
@@ -447,7 +448,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v21 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v22 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -776,7 +777,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v21 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v22 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -959,7 +960,15 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
   var tabs = [], active = null, seq = 0;
   var base = location.href.split("#")[0].split("?")[0];
   var detachMode = /[?&]detach=1/.test(location.search);
-  var extra = location.search.replace(/^\?/, "").replace(/(^|&)detach=1/, "").replace(/^&/, "");
+  // okno vzniknuté oddelením karty pozná hlavné okno (from), aby mu vedelo kartu vrátiť
+  var homeId = (location.search.match(/[?&]from=([a-z0-9]+)/) || [])[1] || "";
+  var extra = location.search.replace(/^\?/, "").replace(/(^|&)detach=1/, "").replace(/(^|&)from=[a-z0-9]+/, "").replace(/^&/, "");
+  var myId = "";
+  try { myId = homeId ? "" : (sessionStorage.getItem("pt-shell-id") || ""); } catch (e) {}
+  if (!myId) myId = Math.random().toString(36).slice(2, 10);
+  try { sessionStorage.setItem("pt-shell-id", myId); } catch (e) {}
+  if (homeId) document.documentElement.classList.add("pt-popup");
+  var bc = null; try { bc = new BroadcastChannel("pt-tabs"); } catch (e) {}
   if (detachMode) history.replaceState(null, "", location.pathname + (extra ? "?" + extra : ""));
   if (/[?&]shared=1/.test(location.search)) history.replaceState(null, "", location.pathname);
 
@@ -980,15 +989,24 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     el.addEventListener("click", function (e) { if (e.target.closest(".x")) return; activate(t); });
     el.addEventListener("auxclick", function (e) { if (e.button === 1) closeTab(t); });
     el.querySelector(".x").addEventListener("click", function (e) { e.stopPropagation(); closeTab(t); });
-    el.querySelector(".pop").addEventListener("click", function (e) { e.stopPropagation(); detach(t); });
+    if (homeId) {
+      var pb = el.querySelector(".pop");
+      pb.title = "Vrátiť kartu do hlavného okna"; pb.setAttribute("aria-label", "Vrátiť do hlavného okna");
+      pb.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20H4v-6M4 20l9-9M6 10V5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    el.querySelector(".pop").addEventListener("click", function (e) { e.stopPropagation(); if (homeId) give(t, homeId); else detach(t); });
     el.addEventListener("dragstart", function (e) {
       if (e.target.closest && e.target.closest("button")) { e.preventDefault(); return; }
-      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", t.title || "PDF Tlač"); } catch (err) {}
+      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("application/x-pt-tab", myId + ":" + t.id); e.dataTransfer.setData("text/plain", t.title || "PDF Tlač"); } catch (err) {}
       el.classList.add("dragging"); framesEl.style.pointerEvents = "none";
     });
     el.addEventListener("dragend", function (e) {
       el.classList.remove("dragging"); framesEl.style.pointerEvents = "";
       // pustená mimo okna alebo nižšie v okne (ako v Chrome) = samostatné okno
+      // pustená na lištu kariet (aj v inom okne) = tam sa presunie, nič ďalšie
+      if (e.dataTransfer && e.dataTransfer.dropEffect && e.dataTransfer.dropEffect !== "none") return;
+      // jediná karta v okne sa neoddeľuje (inak by vznikali prázdne okná)
+      if (tabs.length < 2) return;
       var bar = tabsEl.getBoundingClientRect();
       var outScreen = e.screenX || e.screenY ? (e.screenX < window.screenX || e.screenX > window.screenX + window.outerWidth || e.screenY < window.screenY || e.screenY > window.screenY + window.outerHeight) : false;
       var outClient = e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight;
@@ -1032,24 +1050,79 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     var w = Math.max(700, Math.min(window.outerWidth - 60, screen.availWidth)), h = Math.max(500, Math.min(window.outerHeight - 60, screen.availHeight));
     var x = Math.max(0, window.screenX + 60), y = Math.max(0, window.screenY + 60);
     var win = null;
-    try { win = window.open(base + "?detach=1" + (window.PT_APP ? "&app=" + window.PT_APP : ""), "_blank", "popup=yes,width=" + w + ",height=" + h + ",left=" + x + ",top=" + y); } catch (e) {}
+    try { win = window.open(base + "?detach=1&from=" + (homeId || myId) + (window.PT_APP ? "&app=" + window.PT_APP : ""), "_blank", "popup=yes,width=" + w + ",height=" + h + ",left=" + x + ",top=" + y); } catch (e) {}
     if (!win) { tellTab("Prehliadač nedovolil otvoriť nové okno. Povoľ vyskakovacie okná pre túto stránku a skús znova."); return; }
     pending = { t: t, win: win, ready: false, msg: undefined };
     pending.timer = setTimeout(function () { if (pending && pending.win === win) { pending = null; } }, 30000);
     t.fr.contentWindow.postMessage({ pt: "export" }, "*");
   }
+  function dropTab(t) {
+    var i = tabs.indexOf(t);
+    if (i < 0) return;
+    tabs.splice(i, 1); t.el.remove(); t.fr.remove();
+    if (!tabs.length) {
+      if (homeId || detachMode) { try { window.close(); } catch (e) {} }
+      newTab(); return;
+    }
+    if (active === t) activate(tabs[Math.min(i, tabs.length - 1)]);
+  }
+  // ---------- karta do iného okna PDF Tlač (potiahnutím na lištu alebo tlačidlom späť) ----------
+  var giving = {}, giveSeq = 0;
+  function exportTab(t) {
+    return new Promise(function (res) {
+      var done = false;
+      t.exportCb = function (msg) { if (done) return; done = true; t.exportCb = null; res(msg); };
+      t.fr.contentWindow.postMessage({ pt: "export" }, "*");
+      setTimeout(function () { if (t.exportCb) t.exportCb(null); }, 20000);
+    });
+  }
+  function give(t, toId) {
+    if (!bc || !t.ready || t.giving) return;
+    t.giving = true;
+    exportTab(t).then(function (msg) {
+      if (!msg) { t.giving = false; tellTab("Kartu sa nepodarilo presunúť."); return; }
+      var key = myId + "-" + (++giveSeq);
+      giving[key] = t;
+      bc.postMessage({ pt: "give", to: toId, from: myId, key: key, msg: msg });
+      setTimeout(function () {
+        if (giving[key]) { delete giving[key]; t.giving = false; tellTab("Hlavné okno PDF Tlač je zatvorené, karta preto zostáva tu."); }
+      }, 4000);
+    });
+  }
+  if (bc) bc.onmessage = function (e) {
+    var m = e.data;
+    if (!m || typeof m !== "object" || m.to !== myId) return;
+    if (m.pt === "give" && m.msg) {
+      var nt = m.msg.pt === "none" ? newTab() : newTab(m.msg);
+      flush(nt);
+      bc.postMessage({ pt: "got", to: m.from, key: m.key });
+      try { window.focus(); } catch (err) {}
+    } else if (m.pt === "got" && giving[m.key]) {
+      var gt = giving[m.key]; delete giving[m.key]; dropTab(gt);
+    } else if (m.pt === "take") {
+      var tt = tabs.filter(function (x) { return x.id === m.tab; })[0];
+      if (tt) give(tt, m.from);
+    }
+  };
+  function isTabDrag(e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "application/x-pt-tab") >= 0; }
+  var barEl = shell.querySelector(".tabbar");
+  barEl.addEventListener("dragover", function (e) { if (!isTabDrag(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; barEl.classList.add("drop-here"); });
+  barEl.addEventListener("dragleave", function () { barEl.classList.remove("drop-here"); });
+  barEl.addEventListener("drop", function (e) {
+    barEl.classList.remove("drop-here");
+    if (!isTabDrag(e)) return;
+    e.preventDefault();
+    var v = (e.dataTransfer.getData("application/x-pt-tab") || "").split(":");
+    if (v.length !== 2 || v[0] === myId) return;   // vo vlastnom okne sa nič nedeje
+    if (bc) bc.postMessage({ pt: "take", to: v[0], tab: +v[1], from: myId });
+  });
   function trySend() {
     var p = pending;
     if (!p || !p.ready || p.msg === undefined) return;
     pending = null; clearTimeout(p.timer);
     if (p.msg === null) { try { p.win.close(); } catch (e) {} tellTab("Kartu sa nepodarilo presunúť do nového okna."); return; }
     if (p.msg.pt !== "none") p.win.postMessage({ pt: "detachFile", msg: p.msg }, "*");
-    var i = tabs.indexOf(p.t);
-    if (i >= 0) {
-      tabs.splice(i, 1); p.t.el.remove(); p.t.fr.remove();
-      if (!tabs.length) newTab();
-      else if (active === p.t) activate(tabs[Math.min(i, tabs.length - 1)]);
-    }
+    dropTab(p.t);
   }
   function flush(t) {
     if (!t.ready) return;
@@ -1064,6 +1137,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
       detachMode = false; tabs[0].queue.push(m.msg); flush(tabs[0]); return;
     }
     if (t && m && m.pt === "exported" && pending && pending.t === t) { pending.msg = m.msg || null; trySend(); return; }
+    if (t && m && m.pt === "exported" && t.exportCb) { t.exportCb(m.msg || null); return; }
     if (!t || !m || typeof m !== "object" || !m.pt) return;
     if (m.pt === "ready") { t.ready = true; flush(t); }
     else if (m.pt === "state") { t.title = m.title || ""; t.kind = m.kind || "start"; t.dirty = !!m.dirty; render(t); }
@@ -5208,7 +5282,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v21", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v22", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {
