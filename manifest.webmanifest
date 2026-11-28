@@ -60,5 +60,55 @@
         }
       ]
     }
-  }
+  },
+  "shortcuts": [
+    {
+      "name": "PDF · PDF Tlač",
+      "short_name": "PDF",
+      "url": "./pdf/",
+      "icons": [
+        {
+          "src": "pdf/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Word · PDF Tlač",
+      "short_name": "Word",
+      "url": "./word/",
+      "icons": [
+        {
+          "src": "word/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Excel · PDF Tlač",
+      "short_name": "Excel",
+      "url": "./excel/",
+      "icons": [
+        {
+          "src": "excel/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Poznámky · PDF Tlač",
+      "short_name": "Poznámky",
+      "url": "./poznamky/",
+      "icons": [
+        {
+          "src": "poznamky/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
 }
