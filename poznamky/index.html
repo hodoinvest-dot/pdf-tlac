@@ -419,6 +419,11 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 .tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 .tab .x { width: 28px; height: 28px; border: 0; background: transparent; border-radius: 6px; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; flex: none; display: grid; place-items: center; padding: 0; }
 .tab .x:hover { background: var(--line); color: var(--fg); }
+.tab .pop { width: 24px; height: 24px; border: 0; background: transparent; border-radius: 6px; color: var(--muted); cursor: pointer; flex: none; display: none; place-items: center; padding: 0; }
+.tab:hover .pop, .tab.on .pop { display: grid; }
+.tab .pop:hover { background: var(--line); color: var(--fg); }
+.tab.dragging { opacity: .5; }
+@media (pointer: coarse) { .tab .pop { display: none !important; } }
 #tabAdd { width: 38px; height: 34px; margin-bottom: 3px; border: 0; border-radius: 8px; background: transparent; font-size: 24px; line-height: 1; color: var(--fg); cursor: pointer; flex: none; }
 #tabPrintAll { height: 34px; margin: 0 0 3px 4px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: 600 14px var(--font-body); cursor: pointer; flex: none; display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
 #tabPrintAll[hidden] { display: none; }
@@ -442,7 +447,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
           <rect x="9" y="19" width="14" height="10" rx="1" fill="var(--surface)" stroke="var(--accent)" stroke-width="2.4"/>
         </svg>
         <div style="min-width:0">
-          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v20 · <b>beta</b></button></h1>
+          <h1>PDF Tlač <button type="button" class="ver" id="aboutBtn" title="O aplikácii">v21 · <b>beta</b></button></h1>
           <div class="file-name" id="fileName">PDF, Word a Excel</div>
         </div>
       </div>
@@ -771,7 +776,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
 
 <div class="modal-back" id="aboutBack" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v20 · beta</span></h3>
+    <h3 id="aboutTitle">PDF Tlač <span style="font-weight:500;color:var(--muted)">v21 · beta</span></h3>
     <p>Bezplatná apka na otvorenie, úpravu, tlač a uloženie PDF, Word a Excel súborov. Funguje aj bez internetu.</p>
     <p>Je to <b>beta verzia</b>. Ešte ju vylepšujeme, preto sa môže stať, že niečo nebude fungovať dokonale. Dôležité súbory si pred úpravou skopíruj.</p>
     <p id="aboutContact" class="small"></p>
@@ -953,7 +958,9 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
   var tabsEl = document.getElementById("tabs"), framesEl = document.getElementById("frames");
   var tabs = [], active = null, seq = 0;
   var base = location.href.split("#")[0].split("?")[0];
-  var extra = location.search.replace(/^\?/, "");
+  var detachMode = /[?&]detach=1/.test(location.search);
+  var extra = location.search.replace(/^\?/, "").replace(/(^|&)detach=1/, "").replace(/^&/, "");
+  if (detachMode) history.replaceState(null, "", location.pathname + (extra ? "?" + extra : ""));
   if (/[?&]shared=1/.test(location.search)) history.replaceState(null, "", location.pathname);
 
   function newTab(queue, first) {
@@ -966,11 +973,27 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     var el = document.createElement("div");
     el.className = "tab"; el.setAttribute("role", "tab");
     el.innerHTML = '<span class="ic"></span><span class="nm">Nová karta</span><span class="dot" hidden></span>' +
+      '<button class="pop" type="button" title="Otvoriť v samostatnom okne (alebo kartu potiahni myšou dole či mimo okna)" aria-label="Otvoriť v samostatnom okne"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
       '<button class="x" type="button" title="Zavrieť kartu" aria-label="Zavrieť kartu">×</button>';
+    el.draggable = true;
     var t = { id: id, fr: fr, el: el, ready: false, queue: queue ? [queue] : [], title: "", kind: "start", dirty: false };
     el.addEventListener("click", function (e) { if (e.target.closest(".x")) return; activate(t); });
     el.addEventListener("auxclick", function (e) { if (e.button === 1) closeTab(t); });
     el.querySelector(".x").addEventListener("click", function (e) { e.stopPropagation(); closeTab(t); });
+    el.querySelector(".pop").addEventListener("click", function (e) { e.stopPropagation(); detach(t); });
+    el.addEventListener("dragstart", function (e) {
+      if (e.target.closest && e.target.closest("button")) { e.preventDefault(); return; }
+      try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", t.title || "PDF Tlač"); } catch (err) {}
+      el.classList.add("dragging"); framesEl.style.pointerEvents = "none";
+    });
+    el.addEventListener("dragend", function (e) {
+      el.classList.remove("dragging"); framesEl.style.pointerEvents = "";
+      // pustená mimo okna alebo nižšie v okne (ako v Chrome) = samostatné okno
+      var bar = tabsEl.getBoundingClientRect();
+      var outScreen = e.screenX || e.screenY ? (e.screenX < window.screenX || e.screenX > window.screenX + window.outerWidth || e.screenY < window.screenY || e.screenY > window.screenY + window.outerHeight) : false;
+      var outClient = e.clientX < 0 || e.clientY < 0 || e.clientX > window.innerWidth || e.clientY > window.innerHeight;
+      if (outScreen || outClient || e.clientY > bar.bottom + 60) detach(t);
+    });
     tabs.push(t); tabsEl.appendChild(el); framesEl.appendChild(fr);
     activate(t);
     return t;
@@ -1001,6 +1024,33 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     pa.querySelector(".lbl").textContent = "Tlačiť všetky PDF (" + nPdf + ")";
     if (t === active) document.title = t.title ? t.title + " – " + APPT : APPT;
   }
+  // ---------- karta do samostatného okna ----------
+  var pending = null;
+  function tellTab(text) { if (active && active.ready) active.fr.contentWindow.postMessage({ pt: "status", text: text }, "*"); }
+  function detach(t) {
+    if (pending || !t.ready) return;
+    var w = Math.max(700, Math.min(window.outerWidth - 60, screen.availWidth)), h = Math.max(500, Math.min(window.outerHeight - 60, screen.availHeight));
+    var x = Math.max(0, window.screenX + 60), y = Math.max(0, window.screenY + 60);
+    var win = null;
+    try { win = window.open(base + "?detach=1" + (window.PT_APP ? "&app=" + window.PT_APP : ""), "_blank", "popup=yes,width=" + w + ",height=" + h + ",left=" + x + ",top=" + y); } catch (e) {}
+    if (!win) { tellTab("Prehliadač nedovolil otvoriť nové okno. Povoľ vyskakovacie okná pre túto stránku a skús znova."); return; }
+    pending = { t: t, win: win, ready: false, msg: undefined };
+    pending.timer = setTimeout(function () { if (pending && pending.win === win) { pending = null; } }, 30000);
+    t.fr.contentWindow.postMessage({ pt: "export" }, "*");
+  }
+  function trySend() {
+    var p = pending;
+    if (!p || !p.ready || p.msg === undefined) return;
+    pending = null; clearTimeout(p.timer);
+    if (p.msg === null) { try { p.win.close(); } catch (e) {} tellTab("Kartu sa nepodarilo presunúť do nového okna."); return; }
+    if (p.msg.pt !== "none") p.win.postMessage({ pt: "detachFile", msg: p.msg }, "*");
+    var i = tabs.indexOf(p.t);
+    if (i >= 0) {
+      tabs.splice(i, 1); p.t.el.remove(); p.t.fr.remove();
+      if (!tabs.length) newTab();
+      else if (active === p.t) activate(tabs[Math.min(i, tabs.length - 1)]);
+    }
+  }
   function flush(t) {
     if (!t.ready) return;
     while (t.queue.length) t.fr.contentWindow.postMessage(t.queue.shift(), "*");
@@ -1009,6 +1059,11 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     var t = null;
     tabs.forEach(function (x) { if (x.fr.contentWindow === e.source) t = x; });
     var m = e.data;
+    if (m && typeof m === "object" && m.pt === "detachReady" && pending && e.source === pending.win) { pending.ready = true; trySend(); return; }
+    if (m && typeof m === "object" && m.pt === "detachFile" && detachMode && e.source === window.opener && m.msg && tabs[0]) {
+      detachMode = false; tabs[0].queue.push(m.msg); flush(tabs[0]); return;
+    }
+    if (t && m && m.pt === "exported" && pending && pending.t === t) { pending.msg = m.msg || null; trySend(); return; }
     if (!t || !m || typeof m !== "object" || !m.pt) return;
     if (m.pt === "ready") { t.ready = true; flush(t); }
     else if (m.pt === "state") { t.title = m.title || ""; t.kind = m.kind || "start"; t.dirty = !!m.dirty; render(t); }
@@ -1054,6 +1109,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     });
   }
   newTab(null, true);
+  if (detachMode && window.opener) { try { window.opener.postMessage({ pt: "detachReady" }, "*"); } catch (e) {} }
   window.ptTrack && window.ptTrack(/Mobi|Android/i.test(navigator.userAgent) ? "/mobil" : "/pc", false);
 })();
 </script>
@@ -1141,8 +1197,10 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
   window.addEventListener("beforeunload", function (e) { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- prepínanie režimov ---------- */
+  var pendingDirty = false;
   function setMode(m, title) {
     mode = m;
+    if (pendingDirty && m !== "start") { pendingDirty = false; setTimeout(function () { setDirty(true); }, 0); }
     $("start").hidden = m !== "start";
     $("viewPdf").hidden = m !== "pdf";
     $("viewDoc").hidden = m !== "doc";
@@ -5066,8 +5124,24 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     window.addEventListener("message", function (e) {
       var m = e.data;
       if (e.source !== parent || !m || typeof m !== "object") return;
-      if (m.pt === "open" && m.file) { openAny(m.file); }
-      else if (m.pt === "new") { if (m.what === "doc") newDoc(); else if (m.what === "notes") openNotes(); else newSheet(); }
+      if (m.pt === "open" && m.file) { pendingDirty = !!m.dirty; openAny(m.file); }
+      else if (m.pt === "new") {
+        if (m.what === "doc") newDoc();
+        else if (m.what === "notes") { openNotes(); if (m.noteId) { var nn = notes.filter(function (n) { return n.id === m.noteId; })[0]; if (nn) selectNote(nn, true); } }
+        else newSheet();
+      }
+      else if (m.pt === "status" && m.text) { status(m.text, true, 7000); }
+      else if (m.pt === "export") {
+        var reply = function (msg) { parent.postMessage({ pt: "exported", msg: msg }, "*"); };
+        var asFile = function (p, name, type) { return p.then(function (b) { var blob = b instanceof Blob ? b : new Blob([b], { type: type }); reply({ pt: "open", file: new File([blob], name, { type: type }), dirty: dirty }); }); };
+        try {
+          if (mode === "pdf" && pages.length) { commitTextEditor(); asFile(currentPdfBytes(false), baseName(pdfName) + ".pdf", "application/pdf").catch(function () { reply(null); }); }
+          else if (mode === "doc") { asFile(Promise.resolve().then(exportDocx), baseName(docName) + ".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document").catch(function () { reply(null); }); }
+          else if (mode === "sheet") { asFile(Promise.resolve().then(exportXlsx), baseName(book.name) + ".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet").catch(function () { reply(null); }); }
+          else if (mode === "notes") { flushNote(); reply({ pt: "new", what: "notes", noteId: curNote ? curNote.id : "" }); }
+          else reply({ pt: "none" });
+        } catch (err) { console.error(err); reply(null); }
+      }
       else if (m.pt === "batch" && m.files) { openPdfBatch(m.files, m.print); }
       else if (m.pt === "images" && m.files) { openImages(m.files); }
       else if (m.pt === "getPdf") {
@@ -5134,7 +5208,7 @@ html.pt-shell body > :not(#tabShell) { display: none !important; }
     var data = {
       hodnotenie: rateVal, text: $("rateText").value.trim(), email: $("rateMail").value.trim(),
       _subject: "PDF Tlač – hodnotenie " + rateVal + "/5", _template: "table", _captcha: "false",
-      verzia: "v20", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
+      verzia: "v21", zariadenie: /Mobi|Android/i.test(navigator.userAgent) ? "mobil" : "pc", jazyk: navigator.language || ""
     };
     window.ptTrack && window.ptTrack("hodnotenie-" + rateVal);
     function thanks() {

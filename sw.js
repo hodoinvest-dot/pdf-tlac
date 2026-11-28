@@ -1,4 +1,4 @@
-const CACHE = 'pdf-tlac-v20';
+const CACHE = 'pdf-tlac-v21';
 const LIBS = 'pdf-tlac-lib-b964ed49';   // knižnice: menia sa zriedka, preto zvlášť (build.py sem dá odtlačok)
 const SHARED = 'pdf-tlac-shared';
 const APPS = ['pdf/', 'word/', 'excel/', 'poznamky/'];
